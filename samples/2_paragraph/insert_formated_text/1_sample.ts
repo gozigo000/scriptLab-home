@@ -8,12 +8,17 @@ document.getElementById("add-paragraph")!
 document.getElementById("add-preset")!
   .addEventListener("click", () => tryCatch(addPreStyledFormattedText));
 
+/**
+ * 포맷팅된 텍스트를 삽입합니다.
+ */
 async function addFormattedText() {
   await Word.run(async (context) => {
     // Insert the sentence, then adjust the formatting.
     // Note that replace affects the calling object, in this case the entire document body.
     // A similar method can also be used at the range level.
-    const sentence: Word.Range = context.document.body.insertText("This is some formatted text!", "Replace");
+    const sentence: Word.Range = context.document.body.insertText(
+      "This is some formatted text!", "Replace"
+    );
     sentence.font.set({
       name: "Courier New",
       bold: true,
@@ -24,6 +29,9 @@ async function addFormattedText() {
   });
 }
 
+/**
+ * 포맷팅된 문단을 삽입합니다.
+ */
 async function addFormattedParagraph() {
   await Word.run(async (context) => {
     // Second sentence, let's insert it as a paragraph after the previously inserted one.
@@ -43,16 +51,23 @@ async function addFormattedParagraph() {
   });
 }
 
+/**
+ * 미리 스타일링된 포맷팅된 문단을 삽입합니다.
+ */
 async function addPreStyledFormattedText() {
   await Word.run(async (context) => {
-    const sentence: Word.Paragraph = context.document.body.insertParagraph("To be or not to be", "End");
+    const sentence: Word.Paragraph = context.document.body.insertParagraph(
+      "To be or not to be", "End"
+    );
 
-    // Use styleBuiltIn to use an enumeration of existing styles. If your style is custom make sure to use: range.style = "name of your style";
+    // Use styleBuiltIn to use an enumeration of existing styles. 
+    // If your style is custom make sure to use: range.style = "name of your style";
     sentence.styleBuiltIn = Word.BuiltInStyleName.intenseReference;
 
     await context.sync();
   });
 }
+
 // Default helper for invoking an action and handling errors.
 async function tryCatch(callback) {
   try {
