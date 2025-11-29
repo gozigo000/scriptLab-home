@@ -1,2 +1,10 @@
 *.docx
 *.TMP
+
+# TypeScript 빌드 출력
+dist/
+*.js.map
+*.d.ts.map
+
+# Node modules
+node_modules/

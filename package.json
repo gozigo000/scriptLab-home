@@ -1,0 +1,21 @@
+{
+  "name": "scriptlab-home",
+  "version": "1.0.0",
+  "description": "ScriptLab Office.js samples project",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "office-js",
+    "typescript",
+    "scriptlab"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+

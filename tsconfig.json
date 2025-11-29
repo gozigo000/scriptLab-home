@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    /* 기본 설정 */
+    "target": "ES2015",
+    "module": "ES2015",
+    "lib": ["ES2015", "DOM"],
+    
+    /* 모듈 해석 */
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    
+    /* 타입 체크 */
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    
+    /* 추가 체크 */
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    
+    /* 출력 설정 */
+    "outDir": "./dist",
+    "rootDir": "./",
+    "removeComments": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    
+    /* 기타 */
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.d.ts"
+  ]
+}
+

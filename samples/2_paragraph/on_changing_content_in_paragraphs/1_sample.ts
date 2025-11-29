@@ -1,9 +1,14 @@
-/// <reference path="../../../index.d.ts" />
+// 파일을 모듈로 만들기 위한 빈 export
+export {};
 
-document.getElementById("register-event-handler")!.addEventListener("click", () => tryCatch(registerEventHandler));
-document.getElementById("get-paragraph-by-id")!.addEventListener("click", () => tryCatch(getParagraphById));
-document.getElementById("deregister-event-handler")!.addEventListener("click", () => tryCatch(deregisterEventHandler));
-document.getElementById("setup")!.addEventListener("click", () => tryCatch(setup));
+document.getElementById("register-event-handler")!
+  .addEventListener("click", () => tryCatch(registerEventHandler));
+document.getElementById("get-paragraph-by-id")!
+  .addEventListener("click", () => tryCatch(getParagraphById));
+document.getElementById("deregister-event-handler")!
+  .addEventListener("click", () => tryCatch(deregisterEventHandler));
+document.getElementById("setup")!
+  .addEventListener("click", () => tryCatch(setup));
 
 let eventContext;
 
@@ -17,6 +22,12 @@ async function registerEventHandler() {
   });
 }
 
+/**
+ * 이벤트핸들러: onParagraphChanged 이벤트가 발생할 때 호출되는 함수.
+ * 
+ * @param event - The event object.
+ * @returns A promise that resolves when the event handler is removed.
+ */
 async function paragraphChanged(event: Word.ParagraphChangedEventArgs) {
   await Word.run(async (context) => {
     console.log(`${event.type} event detected. IDs of paragraphs where content was changed:`, event.uniqueLocalIds);
