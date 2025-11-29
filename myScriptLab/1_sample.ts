@@ -22,15 +22,15 @@ async function prettifyCodecText() {
   // SCREAMING_SNAKE_CASE
   await paintWildcard("<[A-Z0-9]{1,}_[A-Za-z0-9_]{1,}>", "#0066FF");
   // 비교문/할당문
-  await replaceSearch("is equal to", "==");
+  await replaceSearch("is equal to", "= =");
   await replaceSearch("is not equal to", "!=");
   await replaceSearch("is greater than or equal to", "≥"); // 순서주의 1
   await replaceSearch("is greater than", ">");             // 순서주의 2
   await replaceSearch("is less than or equal to", "≤"); // 순서주의 1
   await replaceSearch("is less than", "<");             // 순서주의 2
-  await replaceSearch("is set equal to", `'=`);  // 순서주의 1
-  await replaceSearch("are set equal to", `"=`); // 순서주의 2
-  await replaceSearch("set equal to", "=");      // 순서주의 3
+  await replaceSearch("is set equal to", ":=");  // 순서주의 1
+  await replaceSearch("are set equal to", ":="); // 순서주의 2
+  await replaceSearch("set equal to", ":=");     // 순서주의 3
   // acronyms
   await replaceSearch("coding unit", "CU");
   await replaceSearch("coding block", "CB");

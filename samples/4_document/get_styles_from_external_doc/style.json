@@ -1,0 +1,725 @@
+{
+    "styles": [
+        {
+            "baseStyle": "본문",
+            "builtIn": false,
+            "inUse": true,
+            "linked": true,
+            "nextParagraphStyle": "FigOrTable",
+            "nameLocal": "FigOrTable",
+            "priority": 1,
+            "quickStyle": true,
+            "type": "Paragraph",
+            "unhideWhenUsed": false,
+            "visibility": false,
+            "paragraphFormat": {
+                "alignment": "Left",
+                "firstLineIndent": 0.0,
+                "keepTogether": false,
+                "keepWithNext": false,
+                "leftIndent": 12.7,
+                "lineSpacing": 12.0,
+                "lineUnitAfter": 0.0,
+                "lineUnitBefore": 0.0,
+                "mirrorIndents": false,
+                "outlineLevel": "OutlineLevelBodyText",
+                "rightIndent": 13.5,
+                "spaceAfter": 0.0,
+                "spaceBefore": 6.699999999999999,
+                "widowControl": false
+            },
+            "font": {
+                "name": "Times New Roman",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": "#FFF2CC",
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": "#000000",
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Left"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Bottom"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Right"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideHorizontal"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": null,
+            "builtIn": true,
+            "inUse": true,
+            "linked": false,
+            "nextParagraphStyle": "기본 단락 글꼴",
+            "nameLocal": "기본 단락 글꼴",
+            "priority": 2,
+            "quickStyle": false,
+            "type": "Character",
+            "unhideWhenUsed": true,
+            "visibility": true,
+            "paragraphFormat": null,
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": null,
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": null,
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": "표준",
+            "builtIn": true,
+            "inUse": true,
+            "linked": true,
+            "nextParagraphStyle": "머리글",
+            "nameLocal": "머리글",
+            "priority": 100,
+            "quickStyle": false,
+            "type": "Paragraph",
+            "unhideWhenUsed": true,
+            "visibility": false,
+            "paragraphFormat": {
+                "alignment": "Justified",
+                "firstLineIndent": 0.0,
+                "keepTogether": false,
+                "keepWithNext": false,
+                "leftIndent": 0.0,
+                "lineSpacing": 12.95,
+                "lineUnitAfter": 0.0,
+                "lineUnitBefore": 0.0,
+                "mirrorIndents": false,
+                "outlineLevel": "OutlineLevelBodyText",
+                "rightIndent": 0.0,
+                "spaceAfter": 8.0,
+                "spaceBefore": 0.0,
+                "widowControl": false
+            },
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": null,
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": "#000000",
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Left"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Bottom"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Right"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideHorizontal"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": null,
+            "builtIn": true,
+            "inUse": true,
+            "linked": false,
+            "nextParagraphStyle": "목록 없음",
+            "nameLocal": "목록 없음",
+            "priority": 100,
+            "quickStyle": false,
+            "type": "List",
+            "unhideWhenUsed": true,
+            "visibility": true,
+            "paragraphFormat": null,
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": null,
+            "borders": null
+        },
+        {
+            "baseStyle": "표준",
+            "builtIn": true,
+            "inUse": true,
+            "linked": true,
+            "nextParagraphStyle": "바닥글",
+            "nameLocal": "바닥글",
+            "priority": 100,
+            "quickStyle": false,
+            "type": "Paragraph",
+            "unhideWhenUsed": true,
+            "visibility": false,
+            "paragraphFormat": {
+                "alignment": "Justified",
+                "firstLineIndent": 0.0,
+                "keepTogether": false,
+                "keepWithNext": false,
+                "leftIndent": 0.0,
+                "lineSpacing": 12.95,
+                "lineUnitAfter": 0.0,
+                "lineUnitBefore": 0.0,
+                "mirrorIndents": false,
+                "outlineLevel": "OutlineLevelBodyText",
+                "rightIndent": 0.0,
+                "spaceAfter": 8.0,
+                "spaceBefore": 0.0,
+                "widowControl": false
+            },
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": null,
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": "#000000",
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Left"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Bottom"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Right"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideHorizontal"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": "표준",
+            "builtIn": true,
+            "inUse": true,
+            "linked": true,
+            "nextParagraphStyle": "본문",
+            "nameLocal": "본문",
+            "priority": 100,
+            "quickStyle": false,
+            "type": "Paragraph",
+            "unhideWhenUsed": true,
+            "visibility": true,
+            "paragraphFormat": {
+                "alignment": "Justified",
+                "firstLineIndent": 0.0,
+                "keepTogether": false,
+                "keepWithNext": false,
+                "leftIndent": 0.0,
+                "lineSpacing": 12.95,
+                "lineUnitAfter": 0.0,
+                "lineUnitBefore": 0.0,
+                "mirrorIndents": false,
+                "outlineLevel": "OutlineLevelBodyText",
+                "rightIndent": 0.0,
+                "spaceAfter": 9.0,
+                "spaceBefore": 0.0,
+                "widowControl": false
+            },
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": null,
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": "#000000",
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Left"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Bottom"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Right"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideHorizontal"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": "기본 단락 글꼴",
+            "builtIn": false,
+            "inUse": true,
+            "linked": false,
+            "nextParagraphStyle": "스타일1",
+            "nameLocal": "스타일1",
+            "priority": 2,
+            "quickStyle": true,
+            "type": "Character",
+            "unhideWhenUsed": false,
+            "visibility": false,
+            "paragraphFormat": null,
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": "#FFE599",
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": null,
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": null,
+            "builtIn": true,
+            "inUse": true,
+            "linked": false,
+            "nextParagraphStyle": "표준",
+            "nameLocal": "표준",
+            "priority": 1,
+            "quickStyle": true,
+            "type": "Paragraph",
+            "unhideWhenUsed": false,
+            "visibility": false,
+            "paragraphFormat": {
+                "alignment": "Justified",
+                "firstLineIndent": 0.0,
+                "keepTogether": false,
+                "keepWithNext": false,
+                "leftIndent": 0.0,
+                "lineSpacing": 12.95,
+                "lineUnitAfter": 0.0,
+                "lineUnitBefore": 0.0,
+                "mirrorIndents": false,
+                "outlineLevel": "OutlineLevelBodyText",
+                "rightIndent": 0.0,
+                "spaceAfter": 8.0,
+                "spaceBefore": 0.0,
+                "widowControl": false
+            },
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": null,
+            "shading": {
+                "backgroundPatternColor": null,
+                "foregroundPatternColor": "#000000",
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": "#000000",
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Left"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Bottom"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Right"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideHorizontal"
+                    }
+                ]
+            }
+        },
+        {
+            "baseStyle": null,
+            "builtIn": true,
+            "inUse": true,
+            "linked": false,
+            "nextParagraphStyle": "표준 표",
+            "nameLocal": "표준 표",
+            "priority": 100,
+            "quickStyle": false,
+            "type": "Table",
+            "unhideWhenUsed": true,
+            "visibility": true,
+            "paragraphFormat": {
+                "alignment": "Justified",
+                "firstLineIndent": 0.0,
+                "keepTogether": false,
+                "keepWithNext": false,
+                "leftIndent": 0.0,
+                "lineSpacing": 12.95,
+                "lineUnitAfter": 0.0,
+                "lineUnitBefore": 0.0,
+                "mirrorIndents": false,
+                "outlineLevel": "OutlineLevelBodyText",
+                "rightIndent": 0.0,
+                "spaceAfter": 8.0,
+                "spaceBefore": 0.0,
+                "widowControl": true
+            },
+            "font": {
+                "name": "맑은 고딕",
+                "size": 10.0,
+                "bold": false,
+                "italic": false,
+                "color": "#000000",
+                "underline": "None",
+                "subscript": false,
+                "superscript": false,
+                "strikeThrough": false,
+                "doubleStrikeThrough": false,
+                "highlightColor": null,
+                "hidden": false
+            },
+            "listTemplate": null,
+            "tableStyle": {
+                "allowBreakAcrossPage": true,
+                "alignment": "Left",
+                "bottomCellMargin": 0.0,
+                "leftCellMargin": 0.08,
+                "rightCellMargin": 0.08,
+                "topCellMargin": 0.0,
+                "cellSpacing": 0.0
+            },
+            "shading": {
+                "backgroundPatternColor": null,
+                "foregroundPatternColor": null,
+                "texture": "None"
+            },
+            "borders": {
+                "insideBorderColor": "#000000",
+                "insideBorderType": "None",
+                "insideBorderWidth": "None",
+                "outsideBorderColor": "#000000",
+                "outsideBorderType": "None",
+                "outsideBorderWidth": "None",
+                "items": [
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Top"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Left"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Bottom"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "Right"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideHorizontal"
+                    },
+                    {
+                        "color": "#000000",
+                        "type": "None",
+                        "width": "None",
+                        "visible": false,
+                        "location": "InsideVertical"
+                    }
+                ]
+            }
+        }
+    ]
+}
