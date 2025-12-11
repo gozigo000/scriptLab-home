@@ -54,3 +54,166 @@ input {
     background-color: #f3f2f1;
     padding: 10px;
 }
+
+section.samples {
+    margin-top: 20px;
+}
+
+section.samples .ms-Button, section.setup .ms-Button {
+    display: inline-block;
+    margin-bottom: 5px;
+    margin-left: 5px;
+    margin-right: 5px;
+    min-width: 120px;
+    min-height: 20px;
+}
+
+/* Bold 섹션 */
+.bold-section {
+    margin-bottom: 1px;
+    padding: 5px;
+}
+
+#toggleBold {
+    background-color: #0078d4;
+    color: #FFFFFF;
+}
+
+/* 정규식 검색 섹션 */
+.regex-section {
+    margin-bottom: 1px;
+    padding: 5px;
+}
+
+/* 텍스트 치환 섹션 */
+.replace-section {
+    margin-bottom: 1px;
+    padding: 5px;
+}
+
+#replaceIsEqual {
+    background-color: #0078d4;
+    color: #FFFFFF;
+}
+
+.regex-input {
+    width: 300px;
+    padding: 8px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-size: 14px;
+}
+
+#regexSearch {
+    background-color: #FF0000;
+    color: #FFFFFF;
+}
+
+#regexClear {
+    background-color: #808080;
+    color: #FFFFFF;
+}
+
+/* 강조 섹션 */
+.color-section {
+    margin-bottom: 1px;
+    padding: 5px;
+}
+
+.color-section h4 {
+    margin: 0 0 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Yellow 색상 버튼 */
+#highlightYellow {
+    background-color: #FFFF00;
+    color: #000000;
+}
+
+/* Lime 색상 버튼 */
+#highlightLime {
+    background-color: #00FF00;
+    color: #000000;
+}
+
+/* Turquoise 색상 버튼 */
+#highlightTurquoise {
+    background-color: #40E0D0;
+    color: #000000;
+}
+
+/* Pink 색상 버튼 */
+#highlightPink {
+    background-color: #FFC0CB;
+    color: #000000;
+}
+
+/* Blue 색상 버튼 */
+#highlightBlue {
+    background-color: #0000FF;
+    color: #FFFFFF;
+}
+
+/* Red 색상 버튼 */
+#highlightRed {
+    background-color: #FF0000;
+    color: #FFFFFF;
+}
+
+/* DarkBlue 색상 버튼 */
+#highlightDarkBlue {
+    background-color: #00008B;
+    color: #FFFFFF;
+}
+
+/* Teal 색상 버튼 */
+#highlightTeal {
+    background-color: #008080;
+    color: #FFFFFF;
+}
+
+/* Green 색상 버튼 */
+#highlightGreen {
+    background-color: #008000;
+    color: #FFFFFF;
+}
+
+/* Purple 색상 버튼 */
+#highlightPurple {
+    background-color: #800080;
+    color: #FFFFFF;
+}
+
+/* DarkRed 색상 버튼 */
+#highlightDarkRed {
+    background-color: #8B0000;
+    color: #FFFFFF;
+}
+
+/* Olive 색상 버튼 */
+#highlightOlive {
+    background-color: #808000;
+    color: #FFFFFF;
+}
+
+/* Gray 색상 버튼 */
+#highlightGray {
+    background-color: #808080;
+    color: #FFFFFF;
+}
+
+/* LightGray 색상 버튼 */
+#highlightLightGray {
+    background-color: #D3D3D3;
+    color: #000000;
+}
+
+/* Black 색상 버튼 */
+#highlightBlack {
+    background-color: #000000;
+    color: #FFFFFF;
+}
