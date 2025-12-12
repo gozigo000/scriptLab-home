@@ -9,6 +9,16 @@ addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecT
 
 // (MARK) 표준문서 꾸미기 섹션
 // ----------------------
+type SearchMap = {
+  search: string,
+  isWildcard?: boolean,
+  replacement?: string,
+  color?: string,
+  highlight?: string,
+  rangeCollection?: Word.RangeCollection,
+  length?: number,
+}
+
 /**
  * 표준문서 꾸미기
  */
@@ -24,50 +34,47 @@ async function toPrettyCodecText() {
       return;
     }
 
-    // snake_case
-    await _paintWildcard("<[a-z0-9]{1,}_[a-z0-9_]{1,}>", "#0099FF", selection);
-    // camelCase
-    await _paintWildcard("<[a-z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", "#0099FF", selection); // 예: log2CbSizeC
-    await _paintWildcard("<[a-z][A-Z][a-zA-Z0-9]{1,}>", "#0099FF", selection); // 예: xCb, nCbSX, xTbCmp, cIdx
-    await _paintWildcard("<[a-z]{1,}[A-Z0-9]>", "#0099FF", selection); // 예: xY, x0, yY, qP, bS
-    // PascalCase
-    await _paintWildcard("<[A-Z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", "#0099FF", selection);
-    // SCREAMING_SNAKE_CASE
-    await _paintWildcard("<[A-Z0-9]{1,}_[A-Za-z0-9_]{1,}>", "#0066FF", selection);
-    // 비교문/할당문
-    await _replaceSearch("is equal to", "= =", undefined, selection);
-    await _replaceSearch("is not equal to", "!=", undefined, selection);
-    await _replaceSearch("is greater than or equal to", "≥", undefined, selection); // 순서주의 1
-    await _replaceSearch("is greater than", ">", undefined, selection);             // 순서주의 2
-    await _replaceSearch("is less than or equal to", "≤", undefined, selection); // 순서주의 1
-    await _replaceSearch("is less than", "<", undefined, selection);             // 순서주의 2
-    await _replaceSearch("is set equal to", ":=", undefined, selection);  // 순서주의 1
-    await _replaceSearch("are set equal to", ":=", undefined, selection); // 순서주의 2
-    await _replaceSearch("set equal to", ":=", undefined, selection);     // 순서주의 3
-    // acronyms
-    await _replaceSearch("coding unit", "CU", undefined, selection);
-    await _replaceSearch("coding block", "CB", undefined, selection);
-    await _replaceSearch("block vector", "BV", undefined, selection);
-    await _replaceSearch("motion vector", "MV", undefined, selection);
-    // MY 약어
-    await _replaceSearch("location", "loc", undefined, selection);
-    await _replaceSearch("picture", "pic", undefined, selection);
-    await _replaceSearch("variable", "var", undefined, selection);
-    await _replaceSearch("current", "curr", undefined, selection);
-    // 조건식
-    await _replaceWildcard("<If>", "If", "lightgray", selection);
-    await _replaceWildcard("<When>", "`If", "lightgray", selection);
-    await _replaceSearch("Otherwise", "else", "lightgray", selection);
-    await _replaceSearch("until", "until", "lightgray", selection);
-    // await replaceSearch("and", "&&", "lightgray");
-    // 곱하기
-    await _replaceSearch(")x(", ")×(", undefined, selection);
-    // 연한 회색 배경
-    await _replaceSearch("is invoked with", "is invoked with", "lightgray", selection);
-    await _replaceSearch("as outputs", "as outputs", "lightgray", selection);
-    await _replaceSearch("as output", "as output", "lightgray", selection);
-    await _replaceSearch("as inputs", "as inputs", "lightgray", selection);
-    await _replaceSearch("as input", "as input", "lightgray", selection);
+    const searchMaps: SearchMap[] = [
+      // 와일드카드 색칠
+      { isWildcard: true, search: "<[a-z0-9]{1,}_[a-z0-9_]{1,}>", color: "#0099FF" }, // snake_case
+      { isWildcard: true, search: "<[a-z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // camelCase
+      { isWildcard: true, search: "<[a-z][A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // camelCase
+      { isWildcard: true, search: "<[a-z]{1,}[A-Z0-9]>", color: "#0099FF" }, // camelCase
+      { isWildcard: true, search: "<[A-Z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // PascalCase
+      { isWildcard: true, search: "<[A-Z0-9]{1,}_[A-Za-z0-9_]{1,}>", color: "#0066FF" }, // SCREAMING_SNAKE_CASE
+      // 조건식
+      { isWildcard: true, search: "<If>", replacement: "If", highlight: "lightgray" },
+      { isWildcard: true, search: "<When>", replacement: "If", highlight: "lightgray" },
+      { isWildcard: true, search: "<Otherwise>", replacement: "Else", highlight: "lightgray" },
+      { isWildcard: true, search: "<until>", replacement: "until", highlight: "lightgray" },
+      // 비교문/할당문
+      { search: "is equal to", replacement: "= ="},
+      { search: "is not equal to", replacement: "!="},
+      { search: "is greater than or equal to", replacement: "≥"}, // 순서주의 1
+      { search: "is greater than", replacement: ">"},             // 순서주의 2
+      { search: "is less than or equal to", replacement: "≤"}, // 순서주의 1
+      { search: "is less than", replacement: "<"},             // 순서주의 2
+      { search: "is set equal to", replacement: ":="},  // 순서주의 1
+      { search: "are set equal to", replacement: ":="}, // 순서주의 2
+      { search: "set equal to", replacement: ":="},     // 순서주의 3
+      // acronyms
+      { search: "coding unit", replacement: "CU"},
+      { search: "coding block", replacement: "CB"},
+      { search: "block vector", replacement: "BV"},
+      { search: "motion vector", replacement: "MV"},
+      // My abbreviations
+      { search: "location", replacement: "loc"},
+      { search: "picture", replacement: "pic"},
+      { search: "variable", replacement: "var"},
+      { search: "current", replacement: "curr"},
+      // 하위 프로세스 호출 및 입출력
+      { search: "is invoked with", replacement: "is invoked with", highlight: "lightgray" },
+      { search: "as outputs", replacement: "as outputs", highlight: "lightgray" },
+      { search: "as output", replacement: "as output", highlight: "lightgray" },
+      { search: "as inputs", replacement: "as inputs", highlight: "lightgray" },
+      { search: "as input", replacement: "as input", highlight: "lightgray" },
+    ];
+    await _reformatSearch(searchMaps, selection, context);
   });
 }
 
@@ -75,122 +82,45 @@ async function toPrettyCodecText() {
  * 와일드카드 색칠
  * @param wildcard - 와일드카드 표현식
  * @param color - 색상
- * @param searchRange - 검색할 범위 (선택 사항, 없으면 전체 문서)
+ * @param searchRange - 검색범위
  */
-async function _paintWildcard(wildcard: string, color: string, searchRange?: Word.Range) {
-  await Word.run(async (context) => {
-    const searchTarget = searchRange || context.document.body;
+async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, context: Word.RequestContext) {
+  // searchMap 속성 채우기
+  for (const searchText of searchMap) {
     const rangeColl: Word.RangeCollection =
-      searchTarget.search(wildcard, {
-        matchWildcards: true
+      searchRange.search(searchText.search, {
+        matchWildcards: searchText.isWildcard
       });
+
     rangeColl.load("length");
     await context.sync();
+    if (rangeColl.items.length === 0) {
+      continue;
+    }
 
-    rangeColl.items.forEach(item => {
-      item.font.color = color;
-    });
-    await context.sync();
-  });
-}
+    searchText.rangeCollection = rangeColl;
+    searchText.length = rangeColl.items.length;
+  }
 
-/**
- * 일반검색 바꾸기
- * @param searchText - 와일드카드 표현식
- * @param replacement - 바꿀 텍스트
- * @param highlight - 하이라이트 색상 (선택 사항)
- * @param searchRange - 검색할 범위 (선택 사항, 없으면 전체 문서)
- */
-async function _replaceSearch(searchText: string, replacement: string, highlight?: string, searchRange?: Word.Range) {
-  await Word.run(async (context) => {
-    const searchTarget = searchRange || context.document.body;
-    const rangeColl: Word.RangeCollection =
-      searchTarget.search(searchText);
-    rangeColl.load("length");
-    await context.sync();
-
-    // 검색된 각 항목을 replacement 텍스트로 교체 (역순으로 처리하여 위치 변경 문제 방지)
-    const items = rangeColl.items;
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i];
-      item.insertText(replacement, "Replace");
+  // 검색된 텍스트 꾸미기
+  for (const { color, highlight, replacement, length, rangeCollection } of searchMap) {
+    for (let i = length! - 1; i >= 0; i--) {
+      const item = rangeCollection!.items[i];
+      if (color) {
+        item.font.color = color;
+      }
       if (highlight) {
         item.font.highlightColor = highlight;
       }
-    }
-    await context.sync();
-  });
-}
-
-/**
- * 와일드카드 바꾸기
- * @param wildcard - 와일드카드 표현식
- * @param replacement - 바꿀 텍스트
- * @param highlight - 하이라이트 색상 (선택 사항)
- * @param searchRange - 검색할 범위 (선택 사항, 없으면 전체 문서)
- */
-async function _replaceWildcard(wildcard: string, replacement: string, highlight?: string, searchRange?: Word.Range) {
-  await Word.run(async (context) => {
-    const searchTarget = searchRange || context.document.body;
-    const rangeColl: Word.RangeCollection =
-      searchTarget.search(wildcard, {
-        matchWildcards: true
-      });
-    rangeColl.load("length");
-    await context.sync();
-
-    // 검색된 각 항목을 replacement 텍스트로 교체 (역순으로 처리하여 위치 변경 문제 방지)
-    const items = rangeColl.items;
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i];
-      item.insertText(replacement, "Replace");
-      if (highlight) {
-        item.font.highlightColor = highlight;
+      if (replacement) {
+        item.insertText(replacement, "Replace");
       }
     }
-    await context.sync();
-  });
+  }
+  await context.sync();
 }
 
-// (MARK) 텍스트 치환 섹션
-// ----------------------
-// 텍스트 치환 관련 이벤트 등록
-addEvent({ elemID: "replaceIsEqual", event: "click", cb: () => replaceIsEqual() });
 
-/**
- * 선택 범위에서 "is equal to"를 "= ="로 바꾸는 함수
- */
-async function replaceIsEqual() {
-  await Word.run(async (context) => {
-    // 선택 범위 가져오기
-    const selection: Word.Range = context.document.getSelection();
-    selection.load("text");
-    await context.sync();
-
-    const selectedText = selection.text.trim();
-    if (!selectedText) {
-      return;
-    }
-
-    // 선택 범위 내에서 "is equal to" 검색
-    const results = selection.search("is equal to", {
-      matchCase: false,
-    });
-    results.load("items");
-    await context.sync();
-
-    if (results.items.length === 0) {
-      return;
-    }
-
-    // 역순으로 바꾸기 (텍스트 위치가 변경되므로 뒤에서부터 처리)
-    for (let i = results.items.length - 1; i >= 0; i--) {
-      const item = results.items[i];
-      item.insertText("= =", Word.InsertLocation.replace);
-    }
-    await context.sync();
-  });
-}
 
 // (MARK) 정규식 검색 섹션
 // ----------------------
@@ -288,6 +218,8 @@ async function toPlain() {
   });
 }
 
+
+
 // (MARK) Bold 섹션
 // ----------------------
 // Bold 관련 이벤트 등록
@@ -329,6 +261,8 @@ async function toggleBold() {
     await context.sync();
   });
 }
+
+
 
 // (MARK) 하이라이트 섹션
 // ----------------------
