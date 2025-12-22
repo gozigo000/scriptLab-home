@@ -43,36 +43,101 @@ async function toPrettyCodecText() {
       { isWildcard: true, search: "<[A-Z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // PascalCase
       { isWildcard: true, search: "<[A-Z0-9]{1,}_[A-Za-z0-9_]{1,}>", color: "#0066FF" }, // SCREAMING_SNAKE_CASE
       // 조건식
-      { isWildcard: true, search: "<If>", replacement: "If", highlight: "lightgray" },
-      { isWildcard: true, search: "<When>", replacement: "If", highlight: "lightgray" },
-      { isWildcard: true, search: "<Otherwise>", replacement: "Else", highlight: "lightgray" },
-      { isWildcard: true, search: "<until>", replacement: "until", highlight: "lightgray" },
+      // { isWildcard: true, search: "<If>", replacement: "If", highlight: "lightgray" },
+      // { isWildcard: true, search: "<When>", replacement: "If", highlight: "lightgray" },
+      // { isWildcard: true, search: "<Otherwise>", replacement: "Else", highlight: "lightgray" },
+      // { isWildcard: true, search: "<until>", replacement: "until", highlight: "lightgray" },
       // 비교문/할당문
-      { search: "is equal to", replacement: "= ="},
-      { search: "is not equal to", replacement: "!="},
-      { search: "is greater than or equal to", replacement: "≥"}, // 순서주의 1
-      { search: "is greater than", replacement: ">"},             // 순서주의 2
-      { search: "is less than or equal to", replacement: "≤"}, // 순서주의 1
-      { search: "is less than", replacement: "<"},             // 순서주의 2
-      { search: "is set equal to", replacement: ":="},  // 순서주의 1
-      { search: "are set equal to", replacement: ":="}, // 순서주의 2
-      { search: "set equal to", replacement: ":="},     // 순서주의 3
-      // acronyms
-      { search: "coding unit", replacement: "CU"},
-      { search: "coding block", replacement: "CB"},
-      { search: "block vector", replacement: "BV"},
-      { search: "motion vector", replacement: "MV"},
-      // My abbreviations
-      { search: "location", replacement: "loc"},
-      { search: "picture", replacement: "pic"},
-      { search: "variable", replacement: "var"},
-      { search: "current", replacement: "curr"},
+      // { search: "is equal to", replacement: "= ="},
+      // { search: "is not equal to", replacement: "!="},
+      // { search: "is greater than or equal to", replacement: "≥"}, // 순서주의 1
+      // { search: "is greater than", replacement: ">"},             // 순서주의 2
+      // { search: "is less than or equal to", replacement: "≤"}, // 순서주의 1
+      // { search: "is less than", replacement: "<"},             // 순서주의 2
+      // { search: "is set equal to", replacement: ":="},   // 순서주의 1
+      // { search: "are set equal to", replacement: "::="}, // 순서주의 2
+      // { search: "set equal to", replacement: "="},       // 순서주의 3
+      // Acronyms
+      // { search: "coding unit", replacement: "CU"},
+      // { search: "coding block", replacement: "CB"},
+      // { search: "block vector", replacement: "BV"},
+      // { search: "motion vector", replacement: "MV"},
+      // My Abbreviations
+      // { search: "location", replacement: "loc"},
+      // { search: "picture", replacement: "pic"},
+      // { search: "variable", replacement: "var"},
+      // { search: "current", replacement: "curr"},
       // 하위 프로세스 호출 및 입출력
-      { search: "is invoked with", replacement: "is invoked with", highlight: "lightgray" },
-      { search: "as outputs", replacement: "as outputs", highlight: "lightgray" },
-      { search: "as output", replacement: "as output", highlight: "lightgray" },
-      { search: "as inputs", replacement: "as inputs", highlight: "lightgray" },
-      { search: "as input", replacement: "as input", highlight: "lightgray" },
+      // { search: "is invoked with", replacement: "is invoked with", highlight: "lightgray" },
+      // { search: "as outputs", replacement: "as outputs", highlight: "lightgray" },
+      // { search: "as output", replacement: "as output", highlight: "lightgray" },
+      // { search: "as inputs", replacement: "as inputs", highlight: "lightgray" },
+      // { search: "as input", replacement: "as input", highlight: "lightgray" },
+
+      // 디플 번역 정제
+      { search: "구문", replacement: "신택스" },
+      { search: "구성 요소", replacement: "성분" },
+      { search: "휘도", replacement: "루마" },
+      { search: "명도", replacement: "루마" },
+      { search: "루미너스", replacement: "루마" },
+      { search: "색채", replacement: "크로마" },
+      { search: "색차", replacement: "크로마" },
+      { search: "채도", replacement: "크로마" },
+      { search: "목록", replacement: "리스트" },
+      { search: "영상", replacement: "픽처" },
+      { search: "계산 복잡도", replacement: "계산복잡도" },
+      { search: "참조 샘플", replacement: "참조샘플" },
+      { search: "기준 샘플", replacement: "참조샘플" },
+      { search: "그라디언트", replacement: "그래디언트" },
+      { search: "화면 콘텐츠", replacement: "스크린 콘텐츠" },
+
+      { search: "있습니다", replacement: "있다" },
+      { search: "됩니다", replacement: "된다" },
+      { search: "되었습니다", replacement: "되었다" },
+      { search: "입니다", replacement: "이다" },
+      { search: "합니다", replacement: "한다" }, 
+      // 예외: 동일합니다 -> 동일'하다'
+      // 예외: 필요합니다 -> 필요'하다'
+      { search: "않습니다", replacement: "않는다" },
+      { search: "줍니다", replacement: "준다" },
+      { search: "나타냅니다", replacement: "나타낸다" },
+      { search: "같습니다", replacement: "같다" },
+      { search: "없습니다", replacement: "없다" },
+
+      { search: "신호된다", replacement: "시그널링된다" },
+      { search: "신호화된다", replacement: "시그널링된다" },
+      { search: "신호화되어", replacement: "시그널링되어" },
+      { search: "신호로 전달된다", replacement: "시그널링된다" },
+      { search: "신호로 전달하여", replacement: "시그널링하여" },
+      { search: "신호로 전송된다", replacement: "시그널링된다" },
+      { search: "신호로 전송하여", replacement: "시그널링하여" },
+      { search: "신호화가", replacement: "시그널링이" },
+      { search: "신호 전송 시", replacement: "시그널링 시" },
+      { search: "플래그가 전송", replacement: "플래그가 시그널링" },
+
+      { search: "“", replacement: "\"" },
+      { search: "”", replacement: "\"" },
+
+      { search: "교차 구성", replacement: "교차 성분" }, // cross-component
+      { search: "교차 구성 요소", replacement: "교차 성분" }, // cross-component
+      { search: "부분 샘플링", replacement: "서브샘플링" }, // sub-sampling
+      { search: "다중 모델", replacement: "멀티 모델" }, // multi-model
+      { search: "사용 가능한", replacement: "가용한" }, // available
+      { search: "사용 불가능한", replacement: "비가용한" }, // unavailable
+      { search: "도출", replacement: "유도" }, // derivation
+      { search: "자동상관", replacement: "자기상관" }, // autocorrelation
+
+      // { search: "top", replacement: "top (↑)" },
+      // { search: "above", replacement: "above (↑)" },
+      // { search: "bottom", replacement: "bottom (↓)" },
+      // { search: "below", replacement: "below (↓)" },
+      // { search: "left", replacement: "left (←)" },
+      // { search: "right", replacement: "right (→)" },
+      // { search: "center", replacement: "center ()" },
+      // { search: "middle", replacement: "middle ()" },
+      // { search: "start", replacement: "start ()" },
+      // { search: "end", replacement: "end ()" },
+
     ];
     await _reformatSearch(searchMaps, selection, context);
   });
