@@ -106,16 +106,6 @@ section.samples .ms-Button, section.setup .ms-Button {
     font-size: 14px;
 }
 
-#regexSearch {
-    background-color: #FF0000;
-    color: #FFFFFF;
-}
-
-#regexClear {
-    background-color: #808080;
-    color: #FFFFFF;
-}
-
 /* 강조 섹션 */
 .color-section {
     margin-bottom: 1px;

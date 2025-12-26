@@ -10,14 +10,14 @@ addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecT
 // (MARK) 표준문서 꾸미기 섹션
 // ----------------------
 type SearchMap = {
+  // 검색 속성
   search?: string,
   regex?: RegExp,
+  matchedRanges?: Word.Range[],
+  // 꾸미기 속성
   replacement?: string,
   color?: string,
   highlight?: string,
-  rangeCollection?: Word.RangeCollection,
-  regexRanges?: Word.Range[], // 정규식 검색 결과를 저장하기 위한 배열
-  length?: number,
 }
 
 /**
@@ -100,7 +100,7 @@ async function toPrettyCodecText() {
       { search: "됩니다", replacement: "된다" },
       { search: "되었습니다", replacement: "되었다" },
       { search: "입니다", replacement: "이다" },
-      { search: "합니다", replacement: "한다" }, 
+      { search: "합니다", replacement: "한다" },
       // 예외: 동일합니다 -> 동일'하다'
       // 예외: 필요합니다 -> 필요'하다'
       { search: "않습니다", replacement: "않는다" },
@@ -152,200 +152,78 @@ async function toPrettyCodecText() {
  * 검색 결과 꾸미기
  */
 async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, context: Word.RequestContext) {
+  searchRange.load("text");
+  await context.sync();
+  const rangeText = searchRange.text;
+
   // searchMap 속성 채우기
   for (const searchText of searchMap) {
     if (searchText.regex) {
-      // 정규식 검색 처리 - SearchMap에 결과 저장
-      try {
-        searchRange.load("text");
+      // 정규식 검색 처리
+      // 정규식으로 매칭되는 모든 텍스트 찾기
+      const matchedTexts: string[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = searchText.regex.exec(rangeText)) !== null) {
+        const matchedText = match[0];
+        if (matchedText && matchedTexts.indexOf(matchedText) === -1) {
+          matchedTexts.push(matchedText);
+        }
+      }
+
+      // 각 매칭된 텍스트를 검색하여 Range 배열에 수집
+      const matchedRanges: Word.Range[] = [];
+      for (const matchedText of matchedTexts) {
+        // 특수문자가 포함된 경우 이스케이프 처리
+        const escapedText = matchedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const results = searchRange.search(escapedText, {
+          matchCase: true,
+        });
+        results.load("items");
         await context.sync();
-        const rangeText = searchRange.text;
+        matchedRanges.push(...results.items);
+      }
 
-        // 정규식으로 매칭되는 모든 텍스트 찾기
-        const matchedTexts: string[] = [];
-        let match: RegExpExecArray | null;
-        while ((match = searchText.regex.exec(rangeText)) !== null) {
-          const matchedText = match[0];
-          if (matchedText && matchedTexts.indexOf(matchedText) === -1) {
-            matchedTexts.push(matchedText);
-          }
-        }
-
-        if (matchedTexts.length === 0) {
-          continue;
-        }
-
-        // 각 매칭된 텍스트를 검색하여 Range 배열에 수집
-        const allRanges: Word.Range[] = [];
-        for (const matchedText of matchedTexts) {
-          // 특수문자가 포함된 경우 이스케이프 처리
-          const escapedText = matchedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const results = searchRange.search(escapedText, {
-            matchCase: true,
-          });
-          results.load("items");
-          await context.sync();
-          allRanges.push(...results.items);
-        }
-
-        if (allRanges.length > 0) {
-          searchText.regexRanges = allRanges;
-          searchText.length = allRanges.length;
-        }
-      } catch (error) {
-        console.error("정규식 오류:", error);
+      if (matchedRanges.length === 0) {
         continue;
       }
+
+      searchText.matchedRanges = matchedRanges;
+
     } else {
-      // 일반 검색
-      const rangeColl: Word.RangeCollection = searchRange.search(searchText.search!);
+      // 일반 검색 처리
+      const results = searchRange.search(searchText.search!);
 
-      rangeColl.load("length");
+      results.load("items");
       await context.sync();
-      if (rangeColl.items.length === 0) {
+      if (results.items.length === 0) {
         continue;
       }
 
-      searchText.rangeCollection = rangeColl;
-      searchText.length = rangeColl.items.length;
+      searchText.matchedRanges = results.items;
     }
   }
 
   // 검색 결과 꾸미기 (일반 검색, 정규식 검색 모두 포함)
-  for (const { color, highlight, replacement, length, rangeCollection, regexRanges } of searchMap) {
-    if (length === undefined || length === 0) {
+  for (const { matchedRanges, color, highlight, replacement } of searchMap) {
+    if (!matchedRanges) {
       continue;
     }
 
-    if (regexRanges) {
-      // 정규식 검색 결과 처리
-      for (let i = regexRanges.length - 1; i >= 0; i--) {
-        const item = regexRanges[i];
-        if (color) {
-          item.font.color = color;
-        }
-        if (highlight) {
-          item.font.highlightColor = highlight;
-        }
-        if (replacement) {
-          item.insertText(replacement, "Replace");
-        }
+    // 검색 결과 처리
+    for (let i = matchedRanges.length - 1; i >= 0; i--) {
+      const item = matchedRanges[i];
+      if (color) {
+        item.font.color = color;
       }
-    } else if (rangeCollection) {
-      // 일반 검색 결과 처리
-      for (let i = length - 1; i >= 0; i--) {
-        const item = rangeCollection.items[i];
-        if (color) {
-          item.font.color = color;
-        }
-        if (highlight) {
-          item.font.highlightColor = highlight;
-        }
-        if (replacement) {
-          item.insertText(replacement, "Replace");
-        }
+      if (highlight) {
+        item.font.highlightColor = highlight;
+      }
+      if (replacement) {
+        item.insertText(replacement, "Replace");
       }
     }
   }
   await context.sync();
-}
-
-
-
-// (MARK) 정규식 검색 섹션
-// ----------------------
-// 정규식 검색 관련 이벤트 등록
-addEvent({ elemID: "regexSearch", event: "click", cb: () => regexSearchAndColor() });
-addEvent({ elemID: "regexClear", event: "click", cb: () => toPlain() });
-
-/**
- * 정규식으로 검색하여 빨간색으로 칠하는 함수 (선택 범위에서만)
- */
-async function regexSearchAndColor() {
-  const regexInput = document.getElementById("regexInput") as HTMLInputElement;
-  if (!regexInput) return;
-
-  const pattern = regexInput.value.trim();
-  if (!pattern) {
-    alert("정규식을 입력해주세요.");
-    return;
-  }
-
-  let regex: RegExp;
-  try {
-    regex = new RegExp(pattern, "g");
-  } catch (error) {
-    alert("올바른 정규식이 아닙니다: " + (error as Error).message);
-    return;
-  }
-
-  await Word.run(async (context) => {
-
-    // 선택 범위 가져오기
-    const selection: Word.Range = context.document.getSelection();
-    selection.load("text");
-    await context.sync();
-
-    const selectedText = selection.text.trim();
-
-    if (!selectedText) {
-      return;
-    }
-
-    // 선택 범위 내에서 정규식으로 매칭되는 모든 텍스트 찾기
-    const matches: string[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(selectedText)) !== null) {
-      const matchedText = match[0];
-      if (matchedText && matches.indexOf(matchedText) === -1) {
-        matches.push(matchedText);
-      }
-    }
-
-    if (matches.length === 0) {
-      alert("선택 범위에서 매칭되는 텍스트가 없습니다.");
-      return;
-    }
-
-    // 선택 범위 내에서 각 매칭된 텍스트를 검색하여 빨간색으로 칠하기
-    for (const matchedText of matches) {
-      // 특수문자가 포함된 경우 이스케이프 처리
-      const escapedText = matchedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const results = selection.search(escapedText, {
-        matchCase: false,
-      });
-      results.load("items");
-      await context.sync();
-
-      results.items.forEach((item) => {
-        item.font.color = "#FF0000"; // 빨간색 (RGB: FF0000)
-      });
-      await context.sync();
-    }
-  });
-}
-
-/**
- * 선택 범위 내 모든 글자의 색상을 검정으로 하고 하이라이트를 제거하는 함수
- */
-async function toPlain() {
-  await Word.run(async (context) => {
-    // 선택 범위 가져오기
-    const selection: Word.Range = context.document.getSelection();
-    selection.load("text");
-    await context.sync();
-
-    const selectedText = selection.text.trim();
-
-    if (!selectedText) {
-      return;
-    }
-
-    // 선택 범위 내 모든 글자의 색상을 검정으로 설정하고 하이라이트 제거
-    selection.font.color = "#000000"; // 검정색
-    selection.font.highlightColor = ""; // 하이라이트 제거
-    await context.sync();
-  });
 }
 
 
