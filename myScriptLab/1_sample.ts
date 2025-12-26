@@ -10,8 +10,8 @@ addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecT
 // (MARK) 표준문서 꾸미기 섹션
 // ----------------------
 type SearchMap = {
-  search: string,
-  isRegex?: boolean,
+  search?: string,
+  regex?: RegExp,
   replacement?: string,
   color?: string,
   highlight?: string,
@@ -41,11 +41,11 @@ async function toPrettyCodecText() {
     // const NoTail_azAZ09 = "(?!\w)";
     const searchMaps: SearchMap[] = [
       // 정규식 색칠
-      { isRegex: true, search: "(?<![A-Z0-9])[a-z][a-z0-9]*(_[a-z0-9]+)+", color: "#C04DFF" }, // snake_case
-      { isRegex: true, search: "(?<![A-Z0-9])[a-z][a-z0-9]*([A-Z][a-z0-9]*)+", color: "#00B050" }, // camelCase
-      { isRegex: true, search: "(?<![a-z0-9])[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+", color: "#0099FF" }, // PascalCase
-      { isRegex: true, search: "(?<![a-z0-9])[A-Z][A-Z0-9]*(_[A-Z0-9]+)+", color: "#0066FF" }, // SCREAMING_SNAKE_CASE
-      { isRegex: true, search: "(?<![a-zA-Z0-9])[a-zA-Z][_a-zA-Z0-9]*(?=\\(.*?\\))", color: "#E36C0A" }, // 함수명
+      { regex: /(?<!\w)[a-z][a-z0-9]*(_[a-z0-9]+)+/g, color: "#4F81BD" }, // snake_case
+      { regex: /(?<!\w)[a-z][a-z0-9]*([A-Z][a-z0-9]*)+/g, color: "#00B050" }, // camelCase
+      { regex: /(?<!\w)[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+/g, color: "#0099FF" }, // PascalCase
+      { regex: /(?<!\w)[A-Z][A-Z0-9]*(_[A-Z0-9]+)+/g, color: "#0066FF" }, // SCREAMING_SNAKE_CASE
+      { regex: /(?<!\w)[a-zA-Z][_a-zA-Z0-9]*(?=\(.*?\))/g, color: "#F79646" }, // 함수명
       // { isRegex: true, search: "(?<![a-zA-Z0-9])[a-z][0-9](?![a-zA-Z0-9])", color: "#FF0000" }, // 계수들 (ex. c1, c2, c3, ...)
       // 조건식
       // { search: "If", replacement: "If", highlight: "lightgray" },
@@ -154,10 +154,9 @@ async function toPrettyCodecText() {
 async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, context: Word.RequestContext) {
   // searchMap 속성 채우기
   for (const searchText of searchMap) {
-    if (searchText.isRegex) {
+    if (searchText.regex) {
       // 정규식 검색 처리 - SearchMap에 결과 저장
       try {
-        const regex = new RegExp(searchText.search, "g");
         searchRange.load("text");
         await context.sync();
         const rangeText = searchRange.text;
@@ -165,7 +164,7 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
         // 정규식으로 매칭되는 모든 텍스트 찾기
         const matchedTexts: string[] = [];
         let match: RegExpExecArray | null;
-        while ((match = regex.exec(rangeText)) !== null) {
+        while ((match = searchText.regex.exec(rangeText)) !== null) {
           const matchedText = match[0];
           if (matchedText && matchedTexts.indexOf(matchedText) === -1) {
             matchedTexts.push(matchedText);
@@ -199,7 +198,7 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
       }
     } else {
       // 일반 검색
-      const rangeColl: Word.RangeCollection = searchRange.search(searchText.search);
+      const rangeColl: Word.RangeCollection = searchRange.search(searchText.search!);
 
       rangeColl.load("length");
       await context.sync();
@@ -213,12 +212,12 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
   }
 
   // 검색 결과 꾸미기 (일반 검색, 정규식 검색 모두 포함)
-  for (const { color, highlight, replacement, length, rangeCollection, regexRanges, isRegex } of searchMap) {
+  for (const { color, highlight, replacement, length, rangeCollection, regexRanges } of searchMap) {
     if (length === undefined || length === 0) {
       continue;
     }
 
-    if (isRegex && regexRanges) {
+    if (regexRanges) {
       // 정규식 검색 결과 처리
       for (let i = regexRanges.length - 1; i >= 0; i--) {
         const item = regexRanges[i];
