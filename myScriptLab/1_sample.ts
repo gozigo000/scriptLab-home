@@ -11,11 +11,12 @@ addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecT
 // ----------------------
 type SearchMap = {
   search: string,
-  isWildcard?: boolean,
+  isRegex?: boolean,
   replacement?: string,
   color?: string,
   highlight?: string,
   rangeCollection?: Word.RangeCollection,
+  regexRanges?: Word.Range[], // 정규식 검색 결과를 저장하기 위한 배열
   length?: number,
 }
 
@@ -34,19 +35,23 @@ async function toPrettyCodecText() {
       return;
     }
 
+    // const NoHead_az09 = "(?<![a-z0-9])";
+    // const NoHead_AZ09 = "(?<![A-Z0-9])";
+    // const NoHead_azAZ09 = "(?<![a-zA-Z0-9])";
+    // const NoTail_azAZ09 = "(?!\w)";
     const searchMaps: SearchMap[] = [
-      // 와일드카드 색칠
-      { isWildcard: true, search: "<[a-z0-9]{1,}_[a-z0-9_]{1,}>", color: "#0099FF" }, // snake_case
-      { isWildcard: true, search: "<[a-z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // camelCase
-      { isWildcard: true, search: "<[a-z][A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // camelCase
-      { isWildcard: true, search: "<[a-z]{1,}[A-Z0-9]>", color: "#0099FF" }, // camelCase
-      { isWildcard: true, search: "<[A-Z][a-z0-9]{1,}[A-Z][a-zA-Z0-9]{1,}>", color: "#0099FF" }, // PascalCase
-      { isWildcard: true, search: "<[A-Z0-9]{1,}_[A-Za-z0-9_]{1,}>", color: "#0066FF" }, // SCREAMING_SNAKE_CASE
+      // 정규식 색칠
+      { isRegex: true, search: "(?<![A-Z0-9])[a-z][a-z0-9]*(_[a-z0-9]+)+", color: "#C04DFF" }, // snake_case
+      { isRegex: true, search: "(?<![A-Z0-9])[a-z][a-z0-9]*([A-Z][a-z0-9]*)+", color: "#00B050" }, // camelCase
+      { isRegex: true, search: "(?<![a-z0-9])[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+", color: "#0099FF" }, // PascalCase
+      { isRegex: true, search: "(?<![a-z0-9])[A-Z][A-Z0-9]*(_[A-Z0-9]+)+", color: "#0066FF" }, // SCREAMING_SNAKE_CASE
+      { isRegex: true, search: "(?<![a-zA-Z0-9])[a-zA-Z][_a-zA-Z0-9]*(?=\\(.*?\\))", color: "#E36C0A" }, // 함수명
+      // { isRegex: true, search: "(?<![a-zA-Z0-9])[a-z][0-9](?![a-zA-Z0-9])", color: "#FF0000" }, // 계수들 (ex. c1, c2, c3, ...)
       // 조건식
-      // { isWildcard: true, search: "<If>", replacement: "If", highlight: "lightgray" },
-      // { isWildcard: true, search: "<When>", replacement: "If", highlight: "lightgray" },
-      // { isWildcard: true, search: "<Otherwise>", replacement: "Else", highlight: "lightgray" },
-      // { isWildcard: true, search: "<until>", replacement: "until", highlight: "lightgray" },
+      // { search: "If", replacement: "If", highlight: "lightgray" },
+      // { search: "When", replacement: "If", highlight: "lightgray" },
+      // { search: "Otherwise", replacement: "Else", highlight: "lightgray" },
+      // { search: "until", replacement: "until", highlight: "lightgray" },
       // 비교문/할당문
       // { search: "is equal to", replacement: "= ="},
       // { search: "is not equal to", replacement: "!="},
@@ -144,41 +149,102 @@ async function toPrettyCodecText() {
 }
 
 /**
- * 와일드카드 색칠
- * @param wildcard - 와일드카드 표현식
- * @param color - 색상
- * @param searchRange - 검색범위
+ * 검색 결과 꾸미기
  */
 async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, context: Word.RequestContext) {
   // searchMap 속성 채우기
   for (const searchText of searchMap) {
-    const rangeColl: Word.RangeCollection =
-      searchRange.search(searchText.search, {
-        matchWildcards: searchText.isWildcard
-      });
+    if (searchText.isRegex) {
+      // 정규식 검색 처리 - SearchMap에 결과 저장
+      try {
+        const regex = new RegExp(searchText.search, "g");
+        searchRange.load("text");
+        await context.sync();
+        const rangeText = searchRange.text;
 
-    rangeColl.load("length");
-    await context.sync();
-    if (rangeColl.items.length === 0) {
+        // 정규식으로 매칭되는 모든 텍스트 찾기
+        const matchedTexts: string[] = [];
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(rangeText)) !== null) {
+          const matchedText = match[0];
+          if (matchedText && matchedTexts.indexOf(matchedText) === -1) {
+            matchedTexts.push(matchedText);
+          }
+        }
+
+        if (matchedTexts.length === 0) {
+          continue;
+        }
+
+        // 각 매칭된 텍스트를 검색하여 Range 배열에 수집
+        const allRanges: Word.Range[] = [];
+        for (const matchedText of matchedTexts) {
+          // 특수문자가 포함된 경우 이스케이프 처리
+          const escapedText = matchedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const results = searchRange.search(escapedText, {
+            matchCase: true,
+          });
+          results.load("items");
+          await context.sync();
+          allRanges.push(...results.items);
+        }
+
+        if (allRanges.length > 0) {
+          searchText.regexRanges = allRanges;
+          searchText.length = allRanges.length;
+        }
+      } catch (error) {
+        console.error("정규식 오류:", error);
+        continue;
+      }
+    } else {
+      // 일반 검색
+      const rangeColl: Word.RangeCollection = searchRange.search(searchText.search);
+
+      rangeColl.load("length");
+      await context.sync();
+      if (rangeColl.items.length === 0) {
+        continue;
+      }
+
+      searchText.rangeCollection = rangeColl;
+      searchText.length = rangeColl.items.length;
+    }
+  }
+
+  // 검색 결과 꾸미기 (일반 검색, 정규식 검색 모두 포함)
+  for (const { color, highlight, replacement, length, rangeCollection, regexRanges, isRegex } of searchMap) {
+    if (length === undefined || length === 0) {
       continue;
     }
 
-    searchText.rangeCollection = rangeColl;
-    searchText.length = rangeColl.items.length;
-  }
-
-  // 검색된 텍스트 꾸미기
-  for (const { color, highlight, replacement, length, rangeCollection } of searchMap) {
-    for (let i = length! - 1; i >= 0; i--) {
-      const item = rangeCollection!.items[i];
-      if (color) {
-        item.font.color = color;
+    if (isRegex && regexRanges) {
+      // 정규식 검색 결과 처리
+      for (let i = regexRanges.length - 1; i >= 0; i--) {
+        const item = regexRanges[i];
+        if (color) {
+          item.font.color = color;
+        }
+        if (highlight) {
+          item.font.highlightColor = highlight;
+        }
+        if (replacement) {
+          item.insertText(replacement, "Replace");
+        }
       }
-      if (highlight) {
-        item.font.highlightColor = highlight;
-      }
-      if (replacement) {
-        item.insertText(replacement, "Replace");
+    } else if (rangeCollection) {
+      // 일반 검색 결과 처리
+      for (let i = length - 1; i >= 0; i--) {
+        const item = rangeCollection.items[i];
+        if (color) {
+          item.font.color = color;
+        }
+        if (highlight) {
+          item.font.highlightColor = highlight;
+        }
+        if (replacement) {
+          item.insertText(replacement, "Replace");
+        }
       }
     }
   }
@@ -309,13 +375,7 @@ async function toggleBold() {
 
     // 선택된 텍스트를 검색
     const results = context.document.body.search(selectedText, {
-      // ignorePunct: false,
-      // ignoreSpace: false,
       matchCase: true,
-      // matchPrefix: false,
-      // matchSuffix: false,
-      // matchWholeWord: true,
-      // matchWildcards: false,
     });
     results.load("items");
     await context.sync();
