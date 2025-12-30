@@ -2,7 +2,7 @@ export { };
 
 addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecText() });
 
-// 밝은 보라색:#C04DFF
+// 밝은 보라색: #C04DFF
 // 흐린 하늘색: #4F81BD
 // 밝은 초록색: #9BBB59
 
@@ -178,6 +178,7 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
         const escapedText = matchedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const results = searchRange.search(escapedText, {
           matchCase: true,
+          matchWholeWord: true,
         });
         results.load("items");
         await context.sync();
