@@ -1,10 +1,15 @@
 export { };
 
 addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecText() });
+addEvent({ elemID: "plain-codec-text", event: "click", cb: () => toPlainCodecText() });
 
+// 폰트: 'Aptos Display'
 // 밝은 보라색: #C04DFF
 // 흐린 하늘색: #4F81BD
 // 밝은 초록색: #9BBB59
+// 밝은 파란색: #0066FF
+// 어둔 파란색: #1F497D
+// 어둔 빨간색: #984806
 
 
 // (MARK) 표준문서 꾸미기 섹션
@@ -18,6 +23,7 @@ type SearchMap = {
   replacement?: string,
   color?: string,
   highlight?: string,
+  underline?: string | Word.UnderlineType,
 }
 
 /**
@@ -40,28 +46,25 @@ async function toPrettyCodecText() {
     // const NoHead_azAZ09 = "(?<![a-zA-Z0-9])";
     // const NoTail_azAZ09 = "(?!\w)";
     const searchMaps: SearchMap[] = [
-      // 정규식 색칠
+      // 변수명/상수명
+      { regex: /(?<!\w)[xy][0-9]?(?!\w)/g, color: "#00B050" }, // 좌표들 (ex. x, y, x0, y1)
       { regex: /(?<!\w)[a-z][a-z0-9]*(_[a-z0-9]+)+/g, color: "#4F81BD" }, // snake_case
       { regex: /(?<!\w)[a-z][a-z0-9]*([A-Z][a-z0-9]*)+/g, color: "#00B050" }, // camelCase
-      { regex: /(?<!\w)[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+/g, color: "#0099FF" }, // PascalCase
-      { regex: /(?<!\w)[A-Z][A-Z0-9]*(_[A-Z0-9]+)+/g, color: "#0066FF" }, // SCREAMING_SNAKE_CASE
-      { regex: /(?<!\w)[a-zA-Z][_a-zA-Z0-9]*(?=\(.*?\))/g, color: "#F79646" }, // 함수명
-      // { isRegex: true, search: "(?<![a-zA-Z0-9])[a-z][0-9](?![a-zA-Z0-9])", color: "#FF0000" }, // 계수들 (ex. c1, c2, c3, ...)
+      { regex: /(?<!\w)[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+/g, color: "#0099CC" }, // PascalCase
+      { regex: /(?<!\w)[A-Z][A-Z0-9]*(_[A-Z0-9]+)+/g, color: "#984806" }, // SCREAMING_SNAKE_CASE
+      // 함수명
+      { regex: /(?<!\w)[a-zA-Z][_a-zA-Z0-9]*(?=\(.*?\))/g, color: "#F79646" },
       // 조건식
       // { search: "If", replacement: "If", highlight: "lightgray" },
       // { search: "When", replacement: "If", highlight: "lightgray" },
       // { search: "Otherwise", replacement: "Else", highlight: "lightgray" },
       // { search: "until", replacement: "until", highlight: "lightgray" },
       // 비교문/할당문
-      // { search: "is equal to", replacement: "= ="},
-      // { search: "is not equal to", replacement: "!="},
-      // { search: "is greater than or equal to", replacement: "≥"}, // 순서주의 1
-      // { search: "is greater than", replacement: ">"},             // 순서주의 2
-      // { search: "is less than or equal to", replacement: "≤"}, // 순서주의 1
-      // { search: "is less than", replacement: "<"},             // 순서주의 2
-      // { search: "is set equal to", replacement: ":="},   // 순서주의 1
-      // { search: "are set equal to", replacement: "::="}, // 순서주의 2
-      // { search: "set equal to", replacement: "="},       // 순서주의 3
+      { regex: /(is |are )?(not )?equal to \w+/g, underline: "DottedHeavy" },
+      { regex: /(is |are )?(greater|less) than (or equal to )?\w+/g, underline: "DottedHeavy" },
+      { regex: /not present/g, underline: "DottedHeavy" },
+      { regex: /(is |are )?set equal to \w+/g, underline: "Double" },
+      { regex: /(?<=inferred to )be equal to \w+/g, underline: "Double" },
       // Acronyms
       // { search: "coding unit", replacement: "CU"},
       // { search: "coding block", replacement: "CB"},
@@ -206,7 +209,7 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
   }
 
   // 검색 결과 꾸미기 (일반 검색, 정규식 검색 모두 포함)
-  for (const { matchedRanges, color, highlight, replacement } of searchMap) {
+  for (const { matchedRanges, replacement, color, highlight, underline } of searchMap) {
     if (!matchedRanges) {
       continue;
     }
@@ -220,6 +223,9 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
       if (highlight) {
         item.font.highlightColor = highlight;
       }
+      if (underline) {
+        item.font.underline = underline as Word.UnderlineType;
+      }
       if (replacement) {
         item.insertText(replacement, "Replace");
       }
@@ -228,6 +234,21 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
   await context.sync();
 }
 
+/**
+ * 표준문서 꾸미기 제거 (선택 범위의 모든 꾸미기 초기화)
+ */
+async function toPlainCodecText() {
+  await Word.run(async (context) => {
+    // 선택 범위 가져오기
+    const selection: Word.Range = context.document.getSelection();
+
+    // 선택 범위 내 모든 글자의 꾸미기 제거
+    selection.font.color = "#000000"; // 글자색 제거
+    selection.font.highlightColor = ""; // 하이라이트 제거
+    selection.font.underline = "None"; // 밑줄 제거
+    await context.sync();
+  });
+}
 
 
 // (MARK) Bold 섹션
@@ -249,7 +270,7 @@ async function toggleBold() {
       return;
     }
 
-    // 현재 bold 상태를 확인
+    // 현재 선택 범위의 bold 상태 확인
     const isBold = selection.font.bold;
 
     // 선택된 텍스트를 검색
