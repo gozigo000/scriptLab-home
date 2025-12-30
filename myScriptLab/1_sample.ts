@@ -131,6 +131,7 @@ async function toPrettyCodecText() {
       { search: "사용 불가능한", replacement: "비가용한" }, // unavailable
       { search: "도출", replacement: "유도" }, // derivation
       { search: "자동상관", replacement: "자기상관" }, // autocorrelation
+      { search: "디블로킹 필터", replacement: "DF" }, // deblocking filter
 
       // { search: "top", replacement: "top (↑)" },
       // { search: "above", replacement: "above (↑)" },
