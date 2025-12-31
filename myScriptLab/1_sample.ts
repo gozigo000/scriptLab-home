@@ -2,6 +2,7 @@ export { };
 
 addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecText() });
 addEvent({ elemID: "plain-codec-text", event: "click", cb: () => toPlainCodecText() });
+addEvent({ elemID: "korean-word-codec", event: "click", cb: () => toKoreanWordCodec() });
 
 // 폰트: 'Aptos Display'
 // 밝은 보라색: #C04DFF
@@ -61,7 +62,7 @@ async function toPrettyCodecText() {
       // { search: "until", replacement: "until", highlight: "lightgray" },
       // 비교문/할당문
       { regex: /(is |are )?(not )?equal to \w+/g, underline: "DottedHeavy" },
-      { regex: /(is |are )?(greater|less) than (or equal to )?\w+/g, underline: "DottedHeavy" },
+      { regex: /(is |are )?(greater|less|smaller|larger) than (or equal to )?\w+/g, underline: "DottedHeavy" },
       { regex: /not present/g, underline: "DottedHeavy" },
       { regex: /(is |are )?set equal to \w+/g, underline: "Double" },
       { regex: /(?<=inferred to )be equal to \w+/g, underline: "Double" },
@@ -83,58 +84,51 @@ async function toPrettyCodecText() {
       // { search: "as input", replacement: "as input", highlight: "lightgray" },
 
       // 디플 번역 정제
-      { search: "구문", replacement: "신택스" },
-      { search: "구성 요소", replacement: "성분" },
-      { search: "휘도", replacement: "루마" },
-      { search: "명도", replacement: "루마" },
-      { search: "루미너스", replacement: "루마" },
-      { search: "색채", replacement: "크로마" },
-      { search: "색차", replacement: "크로마" },
-      { search: "채도", replacement: "크로마" },
-      { search: "목록", replacement: "리스트" },
-      { search: "영상", replacement: "픽처" },
-      { search: "계산 복잡도", replacement: "계산복잡도" },
-      { search: "참조 샘플", replacement: "참조샘플" },
-      { search: "기준 샘플", replacement: "참조샘플" },
-      { search: "그라디언트", replacement: "그래디언트" },
-      { search: "화면 콘텐츠", replacement: "스크린 콘텐츠" },
+      // { search: "구문", replacement: "신택스" },
+      // { search: "구성 요소", replacement: "성분" },
+      // { search: "휘도", replacement: "루마" },
+      // { search: "명도", replacement: "루마" },
+      // { search: "루미너스", replacement: "루마" },
+      // { search: "색채", replacement: "크로마" },
+      // { search: "색차", replacement: "크로마" },
+      // { search: "채도", replacement: "크로마" },
+      // { search: "목록", replacement: "리스트" },
+      // { search: "영상", replacement: "픽처" },
+      // { search: "계산 복잡도", replacement: "계산복잡도" },
+      // { search: "참조 샘플", replacement: "참조샘플" },
+      // { search: "기준 샘플", replacement: "참조샘플" },
+      // { search: "그라디언트", replacement: "그래디언트" },
+      // { search: "화면 콘텐츠", replacement: "스크린 콘텐츠" },
 
-      { search: "있습니다", replacement: "있다" },
-      { search: "됩니다", replacement: "된다" },
-      { search: "되었습니다", replacement: "되었다" },
-      { search: "입니다", replacement: "이다" },
-      { search: "합니다", replacement: "한다" },
-      // 예외: 동일합니다 -> 동일'하다'
-      // 예외: 필요합니다 -> 필요'하다'
-      { search: "않습니다", replacement: "않는다" },
-      { search: "줍니다", replacement: "준다" },
-      { search: "나타냅니다", replacement: "나타낸다" },
-      { search: "같습니다", replacement: "같다" },
-      { search: "없습니다", replacement: "없다" },
+      // { search: "있습니다", replacement: "있다" },
+      // { search: "됩니다", replacement: "된다" },
+      // { search: "되었습니다", replacement: "되었다" },
+      // { search: "입니다", replacement: "이다" },
+      // { search: "합니다", replacement: "한다" },
+      // // 예외: 동일합니다 -> 동일'하다'
+      // // 예외: 필요합니다 -> 필요'하다'
+      // { search: "않습니다", replacement: "않는다" },
+      // { search: "줍니다", replacement: "준다" },
+      // { search: "나타냅니다", replacement: "나타낸다" },
+      // { search: "같습니다", replacement: "같다" },
+      // { search: "없습니다", replacement: "없다" },
 
-      { search: "신호된다", replacement: "시그널링된다" },
-      { search: "신호화된다", replacement: "시그널링된다" },
-      { search: "신호화되어", replacement: "시그널링되어" },
-      { search: "신호로 전달된다", replacement: "시그널링된다" },
-      { search: "신호로 전달하여", replacement: "시그널링하여" },
-      { search: "신호로 전송된다", replacement: "시그널링된다" },
-      { search: "신호로 전송하여", replacement: "시그널링하여" },
-      { search: "신호화가", replacement: "시그널링이" },
-      { search: "신호 전송 시", replacement: "시그널링 시" },
-      { search: "플래그가 전송", replacement: "플래그가 시그널링" },
+      // { search: "신호된다", replacement: "시그널링된다" },
+      // { search: "신호화된다", replacement: "시그널링된다" },
+      // { search: "신호화되어", replacement: "시그널링되어" },
+      // { search: "신호로 전달된다", replacement: "시그널링된다" },
+      // { search: "신호로 전달하여", replacement: "시그널링하여" },
+      // { search: "신호로 전송된다", replacement: "시그널링된다" },
+      // { search: "신호로 전송하여", replacement: "시그널링하여" },
+      // { search: "신호화가", replacement: "시그널링이" },
+      // { search: "신호 전송 시", replacement: "시그널링 시" },
+      // { search: "플래그가 전송", replacement: "플래그가 시그널링" },
 
-      { search: "“", replacement: "\"" },
-      { search: "”", replacement: "\"" },
+      // { search: "“", replacement: "\"" },
+      // { search: "”", replacement: "\"" },
+      // { search: "x", replacement: "×" }, // 곱셈기호
 
-      { search: "교차 구성", replacement: "교차 성분" }, // cross-component
-      { search: "교차 구성 요소", replacement: "교차 성분" }, // cross-component
-      { search: "부분 샘플링", replacement: "서브샘플링" }, // sub-sampling
-      { search: "다중 모델", replacement: "멀티 모델" }, // multi-model
-      { search: "사용 가능한", replacement: "가용한" }, // available
-      { search: "사용 불가능한", replacement: "비가용한" }, // unavailable
-      { search: "도출", replacement: "유도" }, // derivation
-      { search: "자동상관", replacement: "자기상관" }, // autocorrelation
-      { search: "디블로킹 필터", replacement: "DF" }, // deblocking filter
+
 
       // { search: "top", replacement: "top (↑)" },
       // { search: "above", replacement: "above (↑)" },
@@ -196,7 +190,10 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
 
     } else {
       // 일반 검색 처리
-      const results = searchRange.search(searchText.search!);
+      const results = searchRange.search(searchText.search!, {
+        matchCase: true,
+        matchPrefix: true,
+      });
 
       results.load("items");
       await context.sync();
@@ -232,6 +229,42 @@ async function _reformatSearch(searchMap: SearchMap[], searchRange: Word.Range, 
     }
   }
   await context.sync();
+}
+
+/**
+ * 단어: 영어 -> 국어 변환
+ */
+async function toKoreanWordCodec() {
+  await Word.run(async (context) => {
+    // 선택 범위 가져오기
+    const selection: Word.Range = context.document.getSelection();
+    selection.load("text");
+    await context.sync();
+
+    const selectedText = selection.text.trim();
+    if (!selectedText) {
+      return;
+    }
+
+    const searchMaps: SearchMap[] = [
+      // 단어: 영어 -> 국어
+      { search: "sample", replacement: "샘플"},
+      { search: "luma", replacement: "루마" },
+      { search: "chroma", replacement: "크로마" },
+      { search: "predictor", replacement: "예측기"},
+      { search: "mode", replacement: "모드"},
+      { search: "current", replacement: "현재"},
+      { search: "previous", replacement: "이전"},
+      { search: "next", replacement: "다음"},
+      { search: "index", replacement: "인덱스"},    // TODO: 역변환시 단수형/복수형 고려해야 됨
+      { search: "indices", replacement: "인덱스s"}, // 인덱스 -> index / 인덱스s -> indices
+      { search: "vertical", replacement: "수직"},
+      { search: "horizontal", replacement: "수평"},
+      // '팔레트 모드' 관련 단어
+      { search: "palette", replacement: "팔레트"},
+    ];
+    await _reformatSearch(searchMaps, selection, context);
+  });
 }
 
 /**
