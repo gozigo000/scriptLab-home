@@ -421,6 +421,7 @@ async function toggleHighlight(color: string) {
 
 let isSelectionHandlerRegistered = false;
 let isSelectionAutoSearchEnabled = false;
+let previousSelectedText: string | null = null;
 
 // 버튼 클릭 이벤트 등록
 addEvent({ elemID: "toggleSelectionAutoSearch", event: "click", cb: toggleSelectionAutoSearch });
@@ -453,6 +454,14 @@ async function toggleSelectionAutoSearch() {
     button.classList.remove("active");
     button.classList.add("inactive");
     labelSpan.textContent = "활성화";
+    
+    // 이전 하이라이트 제거
+    if (previousSelectedText) {
+      Word.run(async (context) => {
+        await removeHighlight(context, previousSelectedText!);
+        previousSelectedText = null;
+      });
+    }
   }
 }
 
@@ -484,6 +493,28 @@ function registerSelectionChangedHandler() {
 }
 
 /**
+ * 이전 하이라이트 제거 함수 (context를 받는 헬퍼 함수)
+ */
+async function removeHighlight(context: Word.RequestContext, text: string) {
+  try {
+    const results = context.document.body.search(text, {
+      matchCase: true,
+      matchWholeWord: false,
+    });
+    results.load("items");
+    await context.sync();
+
+    // 이전 하이라이트 제거
+    results.items.forEach((item) => {
+      item.font.highlightColor = "";
+    });
+    await context.sync();
+  } catch (error) {
+    console.error("하이라이트 제거 중 오류:", error);
+  }
+}
+
+/**
  * 선택 영역이 변경될 때 호출되는 함수
  */
 function onSelectionChanged(eventArgs: any) {
@@ -500,7 +531,22 @@ function onSelectionChanged(eventArgs: any) {
 
       const selectedText = selection.text.trim();
       if (!selectedText) {
-        return; // 선택된 텍스트가 없으면 종료
+        // 선택된 텍스트가 없으면 이전 하이라이트 제거
+        if (previousSelectedText) {
+          await removeHighlight(context, previousSelectedText);
+          previousSelectedText = null;
+        }
+        return;
+      }
+
+      // 이전 텍스트와 동일하면 하이라이트 유지하고 종료
+      if (selectedText === previousSelectedText) {
+        return;
+      }
+
+      // 이전에 하이라이트된 텍스트가 있으면 하이라이트 제거
+      if (previousSelectedText) {
+        await removeHighlight(context, previousSelectedText);
       }
 
       // 문서 전체에서 선택된 텍스트와 동일한 텍스트 검색
@@ -516,6 +562,9 @@ function onSelectionChanged(eventArgs: any) {
         item.font.highlightColor = "Lime";
       });
       await context.sync();
+
+      // 현재 선택된 텍스트를 이전 텍스트로 저장
+      previousSelectedText = selectedText;
     } catch (error) {
       console.error("선택 영역 검색 및 하이라이트 적용 중 오류:", error);
     }
