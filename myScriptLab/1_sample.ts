@@ -414,6 +414,115 @@ async function toggleHighlight(color: string) {
   });
 }
 
+// (MARK) 선택 영역 변경 감지 섹션
+// ----------------------
+// 페이지 로드 시 이벤트 핸들러 등록 (기본적으로 비활성화 상태)
+// 사용자가 버튼을 클릭하면 활성화됨
+
+let isSelectionHandlerRegistered = false;
+let isSelectionAutoSearchEnabled = false;
+
+// 버튼 클릭 이벤트 등록
+addEvent({ elemID: "toggleSelectionAutoSearch", event: "click", cb: toggleSelectionAutoSearch });
+
+/**
+ * 선택 영역 자동 검색 기능 토글
+ */
+async function toggleSelectionAutoSearch() {
+  const button = document.getElementById("toggleSelectionAutoSearch");
+  const labelSpan = button!.querySelector(".ms-Button-label");
+  
+  if (!button || !labelSpan) {
+    return;
+  }
+
+  isSelectionAutoSearchEnabled = !isSelectionAutoSearchEnabled;
+
+  if (isSelectionAutoSearchEnabled) {
+    // 기능 활성화
+    button.classList.remove("inactive");
+    button.classList.add("active");
+    labelSpan.textContent = "비활성화";
+    
+    // 이벤트 핸들러가 등록되어 있지 않으면 등록
+    if (!isSelectionHandlerRegistered) {
+      registerSelectionChangedHandler();
+    }
+  } else {
+    // 기능 비활성화
+    button.classList.remove("active");
+    button.classList.add("inactive");
+    labelSpan.textContent = "활성화";
+  }
+}
+
+/**
+ * 선택 영역 변경 이벤트 핸들러 등록
+ */
+function registerSelectionChangedHandler() {
+  if (isSelectionHandlerRegistered) {
+    return; // 이미 등록되어 있으면 중복 등록 방지
+  }
+
+  if (typeof Office === "undefined" || !Office.context || !Office.context.document) {
+    console.warn("Office.js가 로드되지 않았습니다. 이벤트 핸들러를 등록할 수 없습니다.");
+    return;
+  }
+
+  // Office.js의 DocumentSelectionChanged 이벤트 등록
+  Office.context.document.addHandlerAsync(
+    Office.EventType.DocumentSelectionChanged,
+    onSelectionChanged as any,
+    (result: Office.AsyncResult<void>) => {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        isSelectionHandlerRegistered = true;
+      } else {
+        console.error("이벤트 핸들러 등록 실패:", result.error);
+      }
+    }
+  );
+}
+
+/**
+ * 선택 영역이 변경될 때 호출되는 함수
+ */
+function onSelectionChanged(eventArgs: any) {
+  if (!isSelectionAutoSearchEnabled) {
+    return; // 기능이 비활성화되어 있으면 종료
+  }
+
+  Word.run(async (context) => {
+    try {
+      // 현재 선택 영역 가져오기
+      const selection: Word.Range = context.document.getSelection();
+      selection.load("text");
+      await context.sync();
+
+      const selectedText = selection.text.trim();
+      if (!selectedText) {
+        return; // 선택된 텍스트가 없으면 종료
+      }
+
+      // 문서 전체에서 선택된 텍스트와 동일한 텍스트 검색
+      const results = context.document.body.search(selectedText, {
+        matchCase: true,
+        matchWholeWord: false,
+      });
+      results.load("items");
+      await context.sync();
+
+      // 찾은 모든 텍스트에 초록색 하이라이트 적용
+      results.items.forEach((item) => {
+        item.font.highlightColor = "Lime";
+      });
+      await context.sync();
+    } catch (error) {
+      console.error("선택 영역 검색 및 하이라이트 적용 중 오류:", error);
+    }
+  });
+}
+
+
 // (MARK) 유틸리티 함수
 // ----------------------
 async function addEvent({ elemID, event, cb }: { elemID: string, event: string, cb: () => Promise<void> }) {

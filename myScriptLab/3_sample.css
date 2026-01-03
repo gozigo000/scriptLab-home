@@ -79,6 +79,25 @@ section.samples .ms-Button, section.setup .ms-Button {
     color: #FFFFFF;
 }
 
+/* 선택 영역 자동 색상 변경 섹션 */
+.selection-auto-search-section {
+    margin-bottom: 1px;
+    padding: 5px;
+}
+
+#toggleSelectionAutoSearch {
+    background-color: #0078d4;
+    color: #FFFFFF;
+}
+
+#toggleSelectionAutoSearch.active {
+    background-color: #28a745;
+}
+
+#toggleSelectionAutoSearch.inactive {
+    background-color: #dc3545;
+}
+
 /* 정규식 검색 섹션 */
 .regex-section {
     margin-bottom: 1px;
