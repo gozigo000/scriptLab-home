@@ -5,9 +5,11 @@
 '
 ' 사용 방법:
 ' 1. 이 모듈을 Word VBA 프로젝트에 추가합니다.
-' 2. clsAppEvents 클래스 모듈이 이미 설정되어 있어야 합니다.
+' 2. modMessageBox 모듈을 Word VBA 프로젝트에 추가합니다.
+'    (modMessageBox.vba 파일 참조 - 자동 닫기 메시지 박스 기능 제공)
+' 3. clsAppEvents 클래스 모듈이 이미 설정되어 있어야 합니다.
 '    (clsAppEvents.cls 파일 참조)
-' 3. ThisDocument 모듈에 다음 코드를 추가합니다:
+' 4. ThisDocument 모듈에 다음 코드를 추가합니다:
 '
 '    Dim myAppEvents As clsAppEvents
 '
@@ -17,20 +19,16 @@
 '        Set myAppEvents.appWord = Word.Application
 '    End Sub
 '
-' 4. 기능을 활성화하려면 ToggleSelectionAutoSearch 서브루틴을 호출합니다.
+' 5. 기능을 활성화하려면 ToggleSelectionAutoSearch 서브루틴을 호출합니다.
 '    예: 매크로 버튼이나 단축키에 ToggleSelectionAutoSearch 할당
-'
-' 참고: clsAppEvents 클래스 모듈에서 이미 OnSelectionChanged를 호출하도록 설정되어 있습니다.
 
 ' 모듈 레벨 변수 (다른 모듈에서 접근 가능하도록 Public으로 선언)
-Public isSelectionHandlerRegistered As Boolean
 Public isSelectionAutoSearchEnabled As Boolean
 Public previousSelectedText As String
 Public isProcessingSelectionChange As Boolean ' 무한루프 방지 플래그
 
 ' 초기화 프로시저 (이 모듈이 로드될 때 호출)
 Public Sub InitializeSelectionAutoSearch()
-    isSelectionHandlerRegistered = False
     isSelectionAutoSearchEnabled = False
     previousSelectedText = ""
     isProcessingSelectionChange = False
@@ -42,11 +40,7 @@ Public Sub ToggleSelectionAutoSearch()
     
     If isSelectionAutoSearchEnabled Then
         ' 기능 활성화
-        ' 이벤트 핸들러가 등록되어 있지 않으면 등록
-        If Not isSelectionHandlerRegistered Then
-            RegisterSelectionChangedHandler
-        End If
-        MsgBox "선택 영역 자동 검색이 활성화되었습니다.", vbInformation
+        Call showMsg("선택 영역 자동 검색이 활성화되었습니다.", "알림", vbInformation, 1000)
     Else
         ' 기능 비활성화
         ' 이전 하이라이트 제거
@@ -54,19 +48,8 @@ Public Sub ToggleSelectionAutoSearch()
             Call RemoveHighlight(previousSelectedText)
             previousSelectedText = ""
         End If
-        MsgBox "선택 영역 자동 검색이 비활성화되었습니다.", vbInformation
+        Call showMsg("선택 영역 자동 검색이 비활성화되었습니다.", "알림", vbInformation, 1000)
     End If
-End Sub
-
-' 선택 영역 변경 이벤트 핸들러 등록
-Public Sub RegisterSelectionChangedHandler()
-    If isSelectionHandlerRegistered Then
-        Exit Sub ' 이미 등록되어 있으면 중복 등록 방지
-    End If
-    
-    ' 이벤트는 clsAppEvents 클래스 모듈에서 appWord_WindowSelectionChange로 처리됨
-    ' 여기서는 플래그만 설정
-    isSelectionHandlerRegistered = True
 End Sub
 
 ' 이전 하이라이트 제거 함수
@@ -96,7 +79,8 @@ Public Sub RemoveHighlight(searchText As String)
         
         ' 모든 일치 항목 찾아서 하이라이트 제거
         Do While .Execute
-            findRange.HighlightColorIndex = wdNoHighlight
+            findRange.Shading.BackgroundPatternColor = wdColorAutomatic ' 자동 색상
+            ' findRange.HighlightColorIndex = wdNoHighlight
             findRange.Collapse wdCollapseEnd
         Loop
     End With
@@ -156,7 +140,7 @@ Public Sub OnSelectionChanged()
         End If
         GoTo CleanUp
     End If
-    
+
     selectedText = Trim(Selection.Text)
     
     ' 선택된 텍스트가 없으면 이전 하이라이트 제거
@@ -180,15 +164,15 @@ Public Sub OnSelectionChanged()
     
     ' 현재 커서 위치 저장 (Range 객체로 저장)
     Set originalRange = Selection.Range.Duplicate
-    
-    ' 화면 업데이트 일시 중지 (이벤트 발생 감소)
-    Application.ScreenUpdating = False
-    
+
     ' 이전에 하이라이트된 텍스트가 있으면 하이라이트 제거
     If previousSelectedText <> "" Then
         Call RemoveHighlight(previousSelectedText)
     End If
-    
+
+    ' 화면 업데이트 일시 중지 (이벤트 발생 감소)
+    Application.ScreenUpdating = False
+
     ' 문서 전체에서 선택된 텍스트와 동일한 텍스트 검색
     Set findRange = ActiveDocument.Content
     
