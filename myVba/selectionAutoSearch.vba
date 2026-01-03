@@ -5,9 +5,9 @@
 '
 ' 사용 방법:
 ' 1. 이 모듈을 Word VBA 프로젝트에 추가합니다.
-' 2. modMessageBox 모듈을 Word VBA 프로젝트에 추가합니다.
-'    (modMessageBox.vba 파일 참조 - 자동 닫기 메시지 박스 기능 제공)
-' 3. clsAppEvents 클래스 모듈이 이미 설정되어 있어야 합니다.
+' 2. MsgBox 모듈을 Word VBA 프로젝트에 추가합니다.
+'    (MsgBox.vba 파일 참조)
+' 3. clsAppEvents 클래스 모듈을 Word VBA 프로젝트에 추가합니다.
 '    (clsAppEvents.cls 파일 참조)
 ' 4. ThisDocument 모듈에 다음 코드를 추가합니다:
 '
@@ -113,13 +113,14 @@ End Sub
 ' 선택 영역이 변경될 때 호출되는 함수
 ' 이 함수는 clsAppEvents 클래스 모듈에서 appWord_WindowSelectionChange 이벤트로 호출됨
 Public Sub OnSelectionChanged()
+    ' 기능이 비활성화되어 있으면 종료
+    If Not isSelectionAutoSearchEnabled Then
+        Exit Sub 
+    End If
+    
     ' 무한루프 방지: 이미 처리 중이면 종료
     If isProcessingSelectionChange Then
         Exit Sub
-    End If
-    
-    If Not isSelectionAutoSearchEnabled Then
-        Exit Sub ' 기능이 비활성화되어 있으면 종료
     End If
     
     ' 처리 중 플래그 설정
@@ -131,35 +132,29 @@ Public Sub OnSelectionChanged()
     Dim findRange As Range
     Dim originalRange As Range
     
-    ' 현재 선택 영역 가져오기
+    ' 선택된 텍스트가 없으면 이전 하이라이트 제거하고 종료
     If Selection.Type = wdSelectionIP Then
-        ' 커서만 있고 선택된 텍스트가 없으면 이전 하이라이트 제거
         If previousSelectedText <> "" Then
             Call RemoveHighlight(previousSelectedText)
             previousSelectedText = ""
         End If
-        GoTo CleanUp
+        isProcessingSelectionChange = False
+        Exit Sub
     End If
 
+    ' 현재 선택 영역 가져오기
     selectedText = Trim(Selection.Text)
-    
-    ' 선택된 텍스트가 없으면 이전 하이라이트 제거
-    If selectedText = "" Then
-        If previousSelectedText <> "" Then
-            Call RemoveHighlight(previousSelectedText)
-            previousSelectedText = ""
-        End If
-        GoTo CleanUp
-    End If
     
     ' 줄바꿈 기호가 있으면 바로 종료
     If InStr(selectedText, vbCrLf) > 0 Or InStr(selectedText, vbLf) > 0 Or InStr(selectedText, vbCr) > 0 Then
-        GoTo CleanUp
+        isProcessingSelectionChange = False
+        Exit Sub
     End If
     
     ' 이전 텍스트와 동일하면 하이라이트 유지하고 종료
     If selectedText = previousSelectedText Then
-        GoTo CleanUp
+        isProcessingSelectionChange = False
+        Exit Sub
     End If
     
     ' 현재 커서 위치 저장 (Range 객체로 저장)
@@ -207,7 +202,8 @@ Public Sub OnSelectionChanged()
     ' 현재 선택된 텍스트를 이전 텍스트로 저장
     previousSelectedText = selectedText
     
-    GoTo CleanUp
+    isProcessingSelectionChange = False
+    Exit Sub
     
 ErrorHandler:
     Debug.Print "선택 영역 검색 및 하이라이트 적용 중 오류: " & Err.Description
@@ -217,9 +213,5 @@ ErrorHandler:
     If Not originalRange Is Nothing Then
         Selection.SetRange originalRange.Start, originalRange.End
     End If
-
-CleanUp:
-    ' 처리 중 플래그 해제
-    isProcessingSelectionChange = False
 End Sub
 
