@@ -4,7 +4,7 @@ addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecT
 addEvent({ elemID: "plain-codec-text", event: "click", cb: () => toPlainCodecText() });
 addEvent({ elemID: "korean-word-codec", event: "click", cb: () => toKoreanWordCodec() });
 
-// 폰트: 'Aptos Display'
+// 폰트: 'Aptos Display', 'Calibri'
 // 밝은 보라색: #C04DFF
 // 흐린 하늘색: #4F81BD
 // 밝은 초록색: #9BBB59
@@ -42,11 +42,10 @@ async function toPrettyCodecText() {
       return;
     }
 
-    // const NoHead_az09 = "(?<![a-z0-9])";
-    // const NoHead_AZ09 = "(?<![A-Z0-9])";
-    // const NoHead_azAZ09 = "(?<![a-zA-Z0-9])";
-    // const NoTail_azAZ09 = "(?!\w)";
     const searchMaps: SearchMap[] = [
+      // 곱셈기호
+      { regex: /(?<=[\)\d])x(?=[\(\d])/g, replacement: "×" },
+
       // 변수명/상수명
       { regex: /(?<!\w)[xy][0-9]?(?!\w)/g, color: "#00B050" }, // 좌표들 (ex. x, y, x0, y1)
       { regex: /(?<!\w)[a-z][a-z0-9]*(_[a-z0-9]+)+/g, color: "#4F81BD" }, // snake_case
@@ -126,9 +125,6 @@ async function toPrettyCodecText() {
 
       // { search: "“", replacement: "\"" },
       // { search: "”", replacement: "\"" },
-      // { search: "x", replacement: "×" }, // 곱셈기호
-
-
 
       // { search: "top", replacement: "top (↑)" },
       // { search: "above", replacement: "above (↑)" },
