@@ -414,7 +414,7 @@ async function toggleHighlight(color: string) {
   });
 }
 
-// (MARK) 선택 영역 변경 감지 섹션
+// (MARK) 선택 영역 자동 검색 섹션
 // ----------------------
 // 페이지 로드 시 이벤트 핸들러 등록 (기본적으로 비활성화 상태)
 // 사용자가 버튼을 클릭하면 활성화됨
@@ -536,6 +536,11 @@ function onSelectionChanged(eventArgs: any) {
           await removeHighlight(context, previousSelectedText);
           previousSelectedText = null;
         }
+        return;
+      }
+      
+      // 줄바꿈 기호가 있으면 바로 종료
+      if (selectedText.includes("\n") || selectedText.includes("\r")) {
         return;
       }
 
