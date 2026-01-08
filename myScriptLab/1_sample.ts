@@ -66,6 +66,7 @@ async function toPrettyCodecText() {
       { regex: /not present/g, underline: "DottedHeavy" },
       { regex: /(is |are )?set equal to \w+/g, underline: "Double" },
       { regex: /(?<=inferred to )be equal to \w+/g, underline: "Double" },
+      { regex: /(is |are )?initialized to \w+/g, underline: "Double" }, // is initialized to
       // Acronyms
       // { search: "coding unit", replacement: "CU"},
       // { search: "coding block", replacement: "CB"},
@@ -128,7 +129,15 @@ async function toPrettyCodecText() {
       // { search: "”", replacement: "\"" },
       // { search: "x", replacement: "×" }, // 곱셈기호
 
-
+      // { search: "교차 구성", replacement: "교차 성분" }, // cross-component
+      // { search: "교차 구성 요소", replacement: "교차 성분" }, // cross-component
+      // { search: "부분 샘플링", replacement: "서브샘플링" }, // sub-sampling
+      // { search: "다중 모델", replacement: "멀티 모델" }, // multi-model
+      // { search: "사용 가능한", replacement: "가용한" }, // available
+      // { search: "사용 불가능한", replacement: "비가용한" }, // unavailable
+      // { search: "도출", replacement: "유도" }, // derivation
+      // { search: "자동상관", replacement: "자기상관" }, // autocorrelation
+      // { search: "디블로킹 필터", replacement: "DBF" }, // deblocking filter
 
       // { search: "top", replacement: "top (↑)" },
       // { search: "above", replacement: "above (↑)" },
