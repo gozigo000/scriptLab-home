@@ -4,7 +4,7 @@ addEvent({ elemID: "pretty-codec-text", event: "click", cb: () => toPrettyCodecT
 addEvent({ elemID: "plain-codec-text", event: "click", cb: () => toPlainCodecText() });
 addEvent({ elemID: "korean-word-codec", event: "click", cb: () => toKoreanWordCodec() });
 
-// 폰트: 'Aptos Display'
+// 폰트: 'Aptos Display', 'Calibri'
 // 밝은 보라색: #C04DFF
 // 흐린 하늘색: #4F81BD
 // 밝은 초록색: #9BBB59
@@ -42,11 +42,10 @@ async function toPrettyCodecText() {
       return;
     }
 
-    // const NoHead_az09 = "(?<![a-z0-9])";
-    // const NoHead_AZ09 = "(?<![A-Z0-9])";
-    // const NoHead_azAZ09 = "(?<![a-zA-Z0-9])";
-    // const NoTail_azAZ09 = "(?!\w)";
     const searchMaps: SearchMap[] = [
+      // 곱셈기호
+      { regex: /(?<=[\)\d])x(?=[\(\d])/g, replacement: "×" },
+
       // 변수명/상수명
       { regex: /(?<!\w)[xy][0-9]?(?!\w)/g, color: "#00B050" }, // 좌표들 (ex. x, y, x0, y1)
       { regex: /(?<!\w)[a-z][a-z0-9]*(_[a-z0-9]+)+/g, color: "#4F81BD" }, // snake_case
@@ -129,15 +128,7 @@ async function toPrettyCodecText() {
       // { search: "”", replacement: "\"" },
       // { search: "x", replacement: "×" }, // 곱셈기호
 
-      // { search: "교차 구성", replacement: "교차 성분" }, // cross-component
-      // { search: "교차 구성 요소", replacement: "교차 성분" }, // cross-component
-      // { search: "부분 샘플링", replacement: "서브샘플링" }, // sub-sampling
-      // { search: "다중 모델", replacement: "멀티 모델" }, // multi-model
-      // { search: "사용 가능한", replacement: "가용한" }, // available
-      // { search: "사용 불가능한", replacement: "비가용한" }, // unavailable
-      // { search: "도출", replacement: "유도" }, // derivation
-      // { search: "자동상관", replacement: "자기상관" }, // autocorrelation
-      // { search: "디블로킹 필터", replacement: "DBF" }, // deblocking filter
+
 
       // { search: "top", replacement: "top (↑)" },
       // { search: "above", replacement: "above (↑)" },
@@ -426,6 +417,169 @@ async function toggleHighlight(color: string) {
     }
   });
 }
+
+// (MARK) 선택 영역 자동 검색 섹션
+// ----------------------
+// 페이지 로드 시 이벤트 핸들러 등록 (기본적으로 비활성화 상태)
+// 사용자가 버튼을 클릭하면 활성화됨
+
+let isSelectionHandlerRegistered = false;
+let isSelectionAutoSearchEnabled = false;
+let previousSelectedText: string | null = null;
+
+// 버튼 클릭 이벤트 등록
+addEvent({ elemID: "toggleSelectionAutoSearch", event: "click", cb: toggleSelectionAutoSearch });
+
+/**
+ * 선택 영역 자동 검색 기능 토글
+ */
+async function toggleSelectionAutoSearch() {
+  const button = document.getElementById("toggleSelectionAutoSearch");
+  const labelSpan = button!.querySelector(".ms-Button-label");
+  
+  if (!button || !labelSpan) {
+    return;
+  }
+
+  isSelectionAutoSearchEnabled = !isSelectionAutoSearchEnabled;
+
+  if (isSelectionAutoSearchEnabled) {
+    // 기능 활성화
+    button.classList.remove("inactive");
+    button.classList.add("active");
+    labelSpan.textContent = "비활성화";
+    
+    // 이벤트 핸들러가 등록되어 있지 않으면 등록
+    if (!isSelectionHandlerRegistered) {
+      registerSelectionChangedHandler();
+    }
+  } else {
+    // 기능 비활성화
+    button.classList.remove("active");
+    button.classList.add("inactive");
+    labelSpan.textContent = "활성화";
+    
+    // 이전 하이라이트 제거
+    if (previousSelectedText) {
+      Word.run(async (context) => {
+        await removeHighlight(context, previousSelectedText!);
+        previousSelectedText = null;
+      });
+    }
+  }
+}
+
+/**
+ * 선택 영역 변경 이벤트 핸들러 등록
+ */
+function registerSelectionChangedHandler() {
+  if (isSelectionHandlerRegistered) {
+    return; // 이미 등록되어 있으면 중복 등록 방지
+  }
+
+  if (typeof Office === "undefined" || !Office.context || !Office.context.document) {
+    console.warn("Office.js가 로드되지 않았습니다. 이벤트 핸들러를 등록할 수 없습니다.");
+    return;
+  }
+
+  // Office.js의 DocumentSelectionChanged 이벤트 등록
+  Office.context.document.addHandlerAsync(
+    Office.EventType.DocumentSelectionChanged,
+    onSelectionChanged as any,
+    (result: Office.AsyncResult<void>) => {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        isSelectionHandlerRegistered = true;
+      } else {
+        console.error("이벤트 핸들러 등록 실패:", result.error);
+      }
+    }
+  );
+}
+
+/**
+ * 이전 하이라이트 제거 함수 (context를 받는 헬퍼 함수)
+ */
+async function removeHighlight(context: Word.RequestContext, text: string) {
+  try {
+    const results = context.document.body.search(text, {
+      matchCase: true,
+      matchWholeWord: false,
+    });
+    results.load("items");
+    await context.sync();
+
+    // 이전 하이라이트 제거
+    results.items.forEach((item) => {
+      item.font.highlightColor = "";
+    });
+    await context.sync();
+  } catch (error) {
+    console.error("하이라이트 제거 중 오류:", error);
+  }
+}
+
+/**
+ * 선택 영역이 변경될 때 호출되는 함수
+ */
+function onSelectionChanged(eventArgs: any) {
+  if (!isSelectionAutoSearchEnabled) {
+    return; // 기능이 비활성화되어 있으면 종료
+  }
+
+  Word.run(async (context) => {
+    try {
+      // 현재 선택 영역 가져오기
+      const selection: Word.Range = context.document.getSelection();
+      selection.load("text");
+      await context.sync();
+
+      const selectedText = selection.text.trim();
+      if (!selectedText) {
+        // 선택된 텍스트가 없으면 이전 하이라이트 제거
+        if (previousSelectedText) {
+          await removeHighlight(context, previousSelectedText);
+          previousSelectedText = null;
+        }
+        return;
+      }
+      
+      // 줄바꿈 기호가 있으면 바로 종료
+      if (selectedText.includes("\n") || selectedText.includes("\r")) {
+        return;
+      }
+
+      // 이전 텍스트와 동일하면 하이라이트 유지하고 종료
+      if (selectedText === previousSelectedText) {
+        return;
+      }
+
+      // 이전에 하이라이트된 텍스트가 있으면 하이라이트 제거
+      if (previousSelectedText) {
+        await removeHighlight(context, previousSelectedText);
+      }
+
+      // 문서 전체에서 선택된 텍스트와 동일한 텍스트 검색
+      const results = context.document.body.search(selectedText, {
+        matchCase: true,
+        matchWholeWord: false,
+      });
+      results.load("items");
+      await context.sync();
+
+      // 찾은 모든 텍스트에 초록색 하이라이트 적용
+      results.items.forEach((item) => {
+        item.font.highlightColor = "Lime";
+      });
+      await context.sync();
+
+      // 현재 선택된 텍스트를 이전 텍스트로 저장
+      previousSelectedText = selectedText;
+    } catch (error) {
+      console.error("선택 영역 검색 및 하이라이트 적용 중 오류:", error);
+    }
+  });
+}
+
 
 // (MARK) 유틸리티 함수
 // ----------------------
