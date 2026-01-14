@@ -10,12 +10,14 @@
 
 ' 모듈 레벨 변수
 Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호 범위들 저장
+Public previousBracketColors As Collection ' 이전 괄호의 원래 배경색 저장
 Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
 Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
 
 ' 초기화 프로시저
 Public Sub InitializeBracketMatcher()
     Set previousBracketRanges = New Collection
+    Set previousBracketColors = New Collection
     isProcessingBracketMatch = False
     isUndoRecordActive = False
 End Sub
@@ -285,15 +287,25 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
         isUndoRecordActive = True
     End If
     
+    ' 첫 번째 괄호의 원래 배경색 저장
+    Dim originalColor1 As Long
+    originalColor1 = bracket1Range.Shading.BackgroundPatternColor
+    
+    ' 두 번째 괄호의 원래 배경색 저장
+    Dim originalColor2 As Long
+    originalColor2 = bracket2Range.Shading.BackgroundPatternColor
+    
     ' 첫 번째 괄호 하이라이트 (파란색)
     bracket1Range.Shading.BackgroundPatternColor = highlightColor
     
     ' 두 번째 괄호 하이라이트 (파란색)
     bracket2Range.Shading.BackgroundPatternColor = highlightColor
     
-    ' 하이라이트된 범위 저장
+    ' 하이라이트된 범위와 원래 배경색 저장
     previousBracketRanges.Add bracket1Range.Duplicate
+    previousBracketColors.Add originalColor1
     previousBracketRanges.Add bracket2Range.Duplicate
+    previousBracketColors.Add originalColor2
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -332,14 +344,17 @@ Public Sub RemoveBracketHighlight()
     ' 화면 업데이트 일시 중지
     Application.ScreenUpdating = False
     
-    ' 모든 하이라이트 제거 (기존 UndoRecord 내에서 실행)
+    ' 모든 하이라이트를 원래 배경색으로 복원 (기존 UndoRecord 내에서 실행)
     For i = 1 To previousBracketRanges.Count
         Set highlightRange = previousBracketRanges(i)
-        highlightRange.Shading.BackgroundPatternColor = wdColorAutomatic
+        Dim originalColor As Long
+        originalColor = previousBracketColors(i)
+        highlightRange.Shading.BackgroundPatternColor = originalColor
     Next i
     
     ' 컬렉션 초기화
     Set previousBracketRanges = New Collection
+    Set previousBracketColors = New Collection
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -353,4 +368,5 @@ ErrorHandler:
     Application.ScreenUpdating = True
     ' 컬렉션 초기화
     Set previousBracketRanges = New Collection
+    Set previousBracketColors = New Collection
 End Sub
