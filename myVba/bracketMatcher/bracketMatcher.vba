@@ -13,6 +13,7 @@ Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호
 Public previousBracketColors As Collection ' 이전 괄호의 원래 배경색 저장
 Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
 Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
+Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 = 1단계 중첩까지, ...)
 
 ' 초기화 프로시저
 Public Sub InitializeBracketMatcher()
@@ -298,11 +299,11 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     ' 눈에 잘 띄는 색상 팔레트 정의
     ReDim highlightColors(0 To 7)
     highlightColors(0) = RGB(255, 100, 100) ' 형광 빨강
-    highlightColors(1) = RGB(100, 150, 255) ' 형광 파랑
+    highlightColors(1) = RGB(100, 255, 255) ' 형광 청록
     highlightColors(2) = RGB(255, 100, 255) ' 형광 핑크
-    highlightColors(3) = RGB(100, 255, 100) ' 형광 초록
+    highlightColors(3) = RGB(100, 150, 255) ' 형광 파랑
     highlightColors(4) = RGB(255, 255, 100) ' 형광 노랑
-    highlightColors(5) = RGB(100, 255, 255) ' 형광 청록
+    highlightColors(5) = RGB(100, 255, 100) ' 형광 초록
     highlightColors(6) = RGB(255, 180, 50) ' 형광 주황
     highlightColors(7) = RGB(200, 100, 255) ' 형광 보라
     
