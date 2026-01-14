@@ -14,7 +14,7 @@ Dim myAppEvents As clsAppEvents
 
 Private Sub Document_Open()
     ' selectionAutoSearch 초기화
-    Call InitializeSelectionAutoSearch
+    'Call InitializeSelectionAutoSearch
     
     ' bracketMatcher 초기화
     Call InitializeBracketMatcher
