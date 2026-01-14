@@ -16,9 +16,11 @@ Private Sub Document_Open()
     ' selectionAutoSearch 초기화
     Call InitializeSelectionAutoSearch
     
+    ' bracketMatcher 초기화
+    Call InitializeBracketMatcher
+    
     ' 클래스 인스턴스 생성 및 Application 객체 연결
-    ' 이 클래스는 WindowSelectionChange 이벤트를 처리하여
-    ' selectionBold와 selectionAutoSearch 기능을 모두 실행합니다.
+    ' 이 클래스는 WindowSelectionChange 이벤트를 처리합니다.
     Set myAppEvents = New clsAppEvents
     Set myAppEvents.appWord = Word.Application
 End Sub

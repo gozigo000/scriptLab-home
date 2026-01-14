@@ -11,7 +11,12 @@ Public WithEvents appWord As Word.Application
 
 ' 선택 영역이 변경될 때 발생하는 이벤트
 Private Sub appWord_WindowSelectionChange(ByVal Sel As Selection)
+
+    ' bracketMatcher 모듈의 함수 호출 (괄호 매칭 및 하이라이트)
+    Call OnBracketMatch
+
     ' selectionAutoSearch 모듈의 함수 호출 (자동 검색 및 하이라이트)
-    Call OnSelectionChanged
+    'Call OnSelectionChanged
+
 End Sub
 

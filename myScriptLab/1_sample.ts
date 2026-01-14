@@ -46,13 +46,20 @@ async function toPrettyCodecText() {
       // 곱셈기호
       { regex: /(?<=[\)\d])x(?=[\(\d])/g, replacement: "×" },
 
+      // TODO: TRUE, FALSE, true, false
+      // TODO: 변수명에서 아래첨자는 빨간색으로 꾸미기
+      // TODO: 상수명에서 Table #
+
       // 변수명/상수명
+      // TODO: shift1, shift2, shift3, 
+      // TODO: { regex: /(?<!\w)[p][0-9]?(?!\w)/g, color: "#00B050" }, // 좌표들 (ex. p, i)
       { regex: /(?<!\w)[xy][0-9]?(?!\w)/g, color: "#00B050" }, // 좌표들 (ex. x, y, x0, y1)
       { regex: /(?<!\w)[a-z][a-z0-9]*(_[a-z0-9]+)+/g, color: "#4F81BD" }, // snake_case
       { regex: /(?<!\w)[a-z][a-z0-9]*([A-Z][a-z0-9]*)+/g, color: "#00B050" }, // camelCase
       { regex: /(?<!\w)[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+/g, color: "#0099CC" }, // PascalCase
       { regex: /(?<!\w)[A-Z][A-Z0-9]*(_[A-Z0-9]+)+/g, color: "#984806" }, // SCREAMING_SNAKE_CASE
       // 함수명
+      // TODO: 함수명에서 for, if, while 제외
       { regex: /(?<!\w)[a-zA-Z][_a-zA-Z0-9]*(?=\(.*?\))/g, color: "#F79646" },
       // 조건식
       // { search: "If", replacement: "If", highlight: "lightgray" },
@@ -60,12 +67,12 @@ async function toPrettyCodecText() {
       // { search: "Otherwise", replacement: "Else", highlight: "lightgray" },
       // { search: "until", replacement: "until", highlight: "lightgray" },
       // 비교문/할당문
-      { regex: /(is |are )?(not )?equal to \w+/g, underline: "DottedHeavy" },
-      { regex: /(is |are )?(greater|less|smaller|larger) than (or equal to )?\w+/g, underline: "DottedHeavy" },
+      { regex: /(is |are )?(not )?equal to \w*/g, underline: "DottedHeavy" },
+      { regex: /(is |are )?(greater|less|smaller|larger) than (or equal to )?\w*/g, underline: "DottedHeavy" },
       { regex: /not present/g, underline: "DottedHeavy" },
-      { regex: /(is |are )?set equal to \w+/g, underline: "Double" },
-      { regex: /(?<=inferred to )be equal to \w+/g, underline: "Double" },
-      { regex: /(is |are )?initialized to \w+/g, underline: "Double" }, // is initialized to
+      { regex: /(is |are )?set equal to \w*/g, underline: "Double" },
+      { regex: /(?<=inferred to )be equal to \w*/g, underline: "Double" },
+      { regex: /(is |are )?initialized to \w*/g, underline: "Double" }, // is initialized to
       // Acronyms
       // { search: "coding unit", replacement: "CU"},
       // { search: "coding block", replacement: "CB"},
@@ -128,7 +135,15 @@ async function toPrettyCodecText() {
       // { search: "”", replacement: "\"" },
       // { search: "x", replacement: "×" }, // 곱셈기호
 
-
+      // { search: "교차 구성", replacement: "교차 성분" }, // cross-component
+      // { search: "교차 구성 요소", replacement: "교차 성분" }, // cross-component
+      // { search: "부분 샘플링", replacement: "서브샘플링" }, // sub-sampling
+      // { search: "다중 모델", replacement: "멀티 모델" }, // multi-model
+      // { search: "사용 가능한", replacement: "가용한" }, // available
+      // { search: "사용 불가능한", replacement: "비가용한" }, // unavailable
+      // { search: "도출", replacement: "유도" }, // derivation
+      // { search: "자동상관", replacement: "자기상관" }, // autocorrelation
+      // { search: "디블로킹 필터", replacement: "DBF" }, // deblocking filter
 
       // { search: "top", replacement: "top (↑)" },
       // { search: "above", replacement: "above (↑)" },
@@ -260,6 +275,11 @@ async function toKoreanWordCodec() {
       { search: "indices", replacement: "인덱스s"}, // 인덱스 -> index / 인덱스s -> indices
       { search: "vertical", replacement: "수직"},
       { search: "horizontal", replacement: "수평"},
+      { search: "reconstructed", replacement: "재구성된"},
+      { search: "intra prediction", replacement: "인트라 예측"},
+      { search: "inter prediction", replacement: "인터 예측"},
+      { search: "neighboring", replacement: "이웃"},
+      { search: "reference", replacement: "참조"},
       // '팔레트 모드' 관련 단어
       { search: "palette", replacement: "팔레트"},
     ];
