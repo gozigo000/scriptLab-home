@@ -11,16 +11,32 @@
 ' 모듈 레벨 변수
 Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호 범위들 저장
 Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
+Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
 
 ' 초기화 프로시저
 Public Sub InitializeBracketMatcher()
     Set previousBracketRanges = New Collection
     isProcessingBracketMatch = False
+    isUndoRecordActive = False
 End Sub
 
 ' 괄호 매칭 및 하이라이트 함수
 ' 이 함수는 clsAppEvents 클래스 모듈에서 appWord_WindowSelectionChange 이벤트로 호출됨
 Public Sub OnBracketMatch()
+    ' 선택 영역의 길이가 0이 아니면 종료 (텍스트가 선택된 경우)
+    If Selection.Type <> wdSelectionIP Then
+        ' 선택 영역이 있으면 이전 하이라이트만 제거하고 종료
+        Call RemoveBracketHighlight
+        ' 하이라이트가 완전히 제거되었으므로 CustomRecord 종료
+        If isUndoRecordActive Then
+            On Error Resume Next
+            Application.UndoRecord.EndCustomRecord
+            On Error Resume Next
+            isUndoRecordActive = False
+        End If
+        Exit Sub
+    End If
+    
     ' 무한루프 방지: 이미 처리 중이면 종료
     If isProcessingBracketMatch Then
         Exit Sub
@@ -37,6 +53,12 @@ Public Sub OnBracketMatch()
     Dim bracketRange As Range
     Dim matchedRange As Range
     Dim originalRange As Range
+    Dim charBefore As String
+    Dim charAfter As String
+    Dim rangeBefore As Range
+    Dim rangeAfter As Range
+    Dim hasBracketBefore As Boolean
+    Dim hasBracketAfter As Boolean
     
     ' 현재 커서 위치 저장
     Set originalRange = Selection.Range.Duplicate
@@ -46,38 +68,77 @@ Public Sub OnBracketMatch()
     Call RemoveBracketHighlight
     
     ' 커서 앞 문자 확인
+    hasBracketBefore = False
     If cursorPos > 0 Then
-        Set docRange = ActiveDocument.Range(cursorPos - 1, cursorPos)
-        currentChar = docRange.Text
-        
-        ' 커서 앞 문자가 괄호인지 확인
-        If IsBracket(currentChar) Then
-            Set bracketRange = docRange.Duplicate
-            Set matchedRange = FindMatchingBracket(bracketRange, currentChar)
+        Set rangeBefore = ActiveDocument.Range(cursorPos - 1, cursorPos)
+        charBefore = rangeBefore.Text
+        hasBracketBefore = IsBracket(charBefore)
+    End If
+    
+    ' 커서 뒤 문자 확인
+    hasBracketAfter = False
+    If cursorPos < ActiveDocument.Content.End Then
+        Set rangeAfter = ActiveDocument.Range(cursorPos, cursorPos + 1)
+        charAfter = rangeAfter.Text
+        hasBracketAfter = IsBracket(charAfter)
+    End If
+    
+    ' 괄호가 없으면 CustomRecord 종료
+    If Not hasBracketBefore And Not hasBracketAfter Then
+        If isUndoRecordActive Then
+            On Error Resume Next
+            Application.UndoRecord.EndCustomRecord
+            On Error GoTo ErrorHandler
+            isUndoRecordActive = False
+        End If
+        GoTo RestoreCursor
+    End If
+    
+    ' 커서 앞뒤에 같은 종류의 여는 괄호가 연속으로 있는 경우, 바깥쪽(더 앞쪽) 괄호 선택
+    If hasBracketBefore And hasBracketAfter Then
+        If IsOpenBracket(charBefore) And IsOpenBracket(charAfter) Then
+            ' 바깥쪽 괄호(앞쪽) 선택
+            Set bracketRange = rangeBefore.Duplicate
+            Set matchedRange = FindMatchingBracket(bracketRange, charBefore)
             
             If Not matchedRange Is Nothing Then
-                ' 괄호 쌍 하이라이트
                 Call HighlightBracketPair(bracketRange, matchedRange)
-                ' 하이라이트를 찾았으므로 종료
+                GoTo RestoreCursor
+            End If
+        ' 커서 앞뒤에 같은 종류의 닫는 괄호가 연속으로 있는 경우, 바깥쪽(더 뒤쪽) 괄호 선택
+        ElseIf IsCloseBracket(charBefore) And IsCloseBracket(charAfter) Then
+            ' 바깥쪽 괄호(뒤쪽) 선택
+            Set bracketRange = rangeAfter.Duplicate
+            Set matchedRange = FindMatchingBracket(bracketRange, charAfter)
+            
+            If Not matchedRange Is Nothing Then
+                Call HighlightBracketPair(bracketRange, matchedRange)
                 GoTo RestoreCursor
             End If
         End If
     End If
     
-    ' 커서 뒤 문자 확인 (커서 앞에 괄호가 없을 경우)
-    If cursorPos < ActiveDocument.Content.End Then
-        Set docRange = ActiveDocument.Range(cursorPos, cursorPos + 1)
-        currentChar = docRange.Text
+    ' 커서 앞 문자 확인
+    If hasBracketBefore Then
+        Set bracketRange = rangeBefore.Duplicate
+        Set matchedRange = FindMatchingBracket(bracketRange, charBefore)
         
-        ' 커서 뒤 문자가 괄호인지 확인
-        If IsBracket(currentChar) Then
-            Set bracketRange = docRange.Duplicate
-            Set matchedRange = FindMatchingBracket(bracketRange, currentChar)
-            
-            If Not matchedRange Is Nothing Then
-                ' 괄호 쌍 하이라이트
-                Call HighlightBracketPair(bracketRange, matchedRange)
-            End If
+        If Not matchedRange Is Nothing Then
+            ' 괄호 쌍 하이라이트
+            Call HighlightBracketPair(bracketRange, matchedRange)
+            ' 하이라이트를 찾았으므로 종료
+            GoTo RestoreCursor
+        End If
+    End If
+    
+    ' 커서 뒤 문자 확인 (커서 앞에 괄호가 없을 경우)
+    If hasBracketAfter Then
+        Set bracketRange = rangeAfter.Duplicate
+        Set matchedRange = FindMatchingBracket(bracketRange, charAfter)
+        
+        If Not matchedRange Is Nothing Then
+            ' 괄호 쌍 하이라이트
+            Call HighlightBracketPair(bracketRange, matchedRange)
         End If
     End If
     
@@ -201,14 +262,34 @@ End Function
 Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     On Error GoTo ErrorHandler
     
+    Dim undoRecordName As String
+    Dim highlightColor As Long
+    
+    highlightColor = RGB(173, 216, 230) ' LightBlue
+    
     ' 화면 업데이트 일시 중지
     Application.ScreenUpdating = False
     
+    ' 이전 하이라이트가 있으면 같은 CustomRecord 내에서 제거
+    If Not previousBracketRanges Is Nothing And previousBracketRanges.Count > 0 Then
+        ' 이전 하이라이트 제거 (CustomRecord 유지)
+        Call RemoveBracketHighlight
+    End If
+    
+    ' CustomRecord가 활성화되어 있지 않으면 시작
+    If Not isUndoRecordActive Then
+        undoRecordName = "BracketHighlight_" & Timer
+        On Error Resume Next
+        Application.UndoRecord.StartCustomRecord undoRecordName
+        On Error GoTo ErrorHandler
+        isUndoRecordActive = True
+    End If
+    
     ' 첫 번째 괄호 하이라이트 (파란색)
-    bracket1Range.Shading.BackgroundPatternColor = RGB(173, 216, 230) ' LightBlue
+    bracket1Range.Shading.BackgroundPatternColor = highlightColor
     
     ' 두 번째 괄호 하이라이트 (파란색)
-    bracket2Range.Shading.BackgroundPatternColor = RGB(173, 216, 230) ' LightBlue
+    bracket2Range.Shading.BackgroundPatternColor = highlightColor
     
     ' 하이라이트된 범위 저장
     previousBracketRanges.Add bracket1Range.Duplicate
@@ -217,21 +298,29 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
     
+    ' Undo 기록은 하이라이트가 제거될 때까지 유지 (여기서 종료하지 않음)
+    
     Exit Sub
     
 ErrorHandler:
     Debug.Print "괄호 하이라이트 중 오류: " & Err.Description
     Application.ScreenUpdating = True
+    On Error Resume Next
+    If isUndoRecordActive Then
+        Application.UndoRecord.EndCustomRecord
+        isUndoRecordActive = False
+    End If
 End Sub
 
 ' 이전 하이라이트 제거 함수
+' 항상 CustomRecord를 유지 (종료하지 않음)
 Public Sub RemoveBracketHighlight()
     On Error GoTo ErrorHandler
     
     Dim i As Long
     Dim highlightRange As Range
     
-    ' 이전 하이라이트가 없으면 종료
+    ' 이전 하이라이트가 없으면 종료 (CustomRecord는 유지)
     If previousBracketRanges Is Nothing Then
         Exit Sub
     End If
@@ -243,7 +332,7 @@ Public Sub RemoveBracketHighlight()
     ' 화면 업데이트 일시 중지
     Application.ScreenUpdating = False
     
-    ' 모든 하이라이트 제거
+    ' 모든 하이라이트 제거 (기존 UndoRecord 내에서 실행)
     For i = 1 To previousBracketRanges.Count
         Set highlightRange = previousBracketRanges(i)
         highlightRange.Shading.BackgroundPatternColor = wdColorAutomatic
@@ -254,6 +343,8 @@ Public Sub RemoveBracketHighlight()
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
+    
+    ' CustomRecord는 항상 유지 (종료하지 않음)
     
     Exit Sub
     
