@@ -50,7 +50,24 @@ Public Sub CreateHyperlinksToSelection()
     undoRecord.StartCustomRecord "하이퍼링크 생성"
     
     ' 현재 선택 영역에 북마크 생성 (하이퍼링크 목적지)
-    bookmarkName = "HyperlinkTarget_" & Format(Now, "yyyymmddhhnnss") & "_" & Int(Rnd * 10000)
+    ' 북마크 이름에 사용할 수 없는 문자 제거 (공백, 특수문자 등)
+    Dim safeSelectedText As String
+    safeSelectedText = selectedText
+    ' 공백을 언더스코어로 변경
+    safeSelectedText = Replace(safeSelectedText, " ", "_")
+    ' 북마크 이름에 사용할 수 없는 특수문자 제거
+    Dim i As Long
+    Dim char As String
+    Dim validText As String
+    validText = ""
+    For i = 1 To Len(safeSelectedText)
+        char = Mid(safeSelectedText, i, 1)
+        ' 영문자, 숫자, 언더스코어만 허용
+        If (char >= "A" And char <= "Z") Or (char >= "a" And char <= "z") Or (char >= "0" And char <= "9") Or char = "_" Or (Asc(char) >= 128) Then
+            validText = validText & char
+        End If
+    Next i
+    bookmarkName = "HyperlinkTarget_" & validText
     
     ' 기존 북마크가 있으면 삭제
     On Error Resume Next
@@ -59,6 +76,22 @@ Public Sub CreateHyperlinksToSelection()
     
     ' 현재 선택 영역에 북마크 추가
     originalRange.Bookmarks.Add bookmarkName
+    
+    ' 원본 선택 영역이 속한 문단의 텍스트 가져오기 (ScreenTip용)
+    Dim paragraphText As String
+    paragraphText = Trim(originalRange.Paragraphs(1).Range.Text)
+    ' 문단 끝의 줄바꿈 문자 제거
+    If Right(paragraphText, 1) = vbCr Or Right(paragraphText, 1) = vbLf Or Right(paragraphText, 2) = vbCrLf Then
+        paragraphText = Left(paragraphText, Len(paragraphText) - 1)
+    End If
+    If Right(paragraphText, 1) = vbCr Or Right(paragraphText, 1) = vbLf Then
+        paragraphText = Left(paragraphText, Len(paragraphText) - 1)
+    End If
+    
+    ' 선택한 단어를 쌍따옴표로 강조
+    If InStr(paragraphText, selectedText) > 0 Then
+        paragraphText = Replace(paragraphText, selectedText, """" & selectedText & """")
+    End If
     
     ' 문서 전체에서 동일한 텍스트 검색
     Set findRange = ActiveDocument.Content
@@ -138,7 +171,7 @@ Public Sub CreateHyperlinksToSelection()
                     Anchor:=targetRange, _
                     Address:="", _
                     SubAddress:=bookmarkName, _
-                    ScreenTip:="안녕", _
+                    ScreenTip:=paragraphText, _
                     TextToDisplay:=selectedText)
                 
                 ' 하이퍼링크 추가 후 하이퍼링크 객체의 Range를 통해 서식 수정
