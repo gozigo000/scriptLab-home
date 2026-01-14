@@ -20,6 +20,7 @@ Public Sub InitializeBracketMatcher()
     Set previousBracketColors = New Collection
     isProcessingBracketMatch = False
     isUndoRecordActive = False
+    maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
 End Sub
 
 ' 괄호 매칭 및 하이라이트 함수
@@ -179,6 +180,19 @@ Private Function IsCloseBracket(char As String) As Boolean
     IsCloseBracket = (char = ")" Or char = "]" Or char = "}")
 End Function
 
+' 괄호의 종류를 반환하는 함수 ("()", "[]", "{}")
+Private Function GetBracketType(char As String) As String
+    If char = "(" Or char = ")" Then
+        GetBracketType = "()"
+    ElseIf char = "[" Or char = "]" Then
+        GetBracketType = "[]"
+    ElseIf char = "{" Or char = "}" Then
+        GetBracketType = "{}"
+    Else
+        GetBracketType = ""
+    End If
+End Function
+
 ' 괄호 쌍을 찾는 함수
 Private Function FindMatchingBracket(bracketRange As Range, bracketChar As String) As Range
     Dim docRange As Range
@@ -265,9 +279,32 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     On Error GoTo ErrorHandler
     
     Dim undoRecordName As String
-    Dim highlightColor As Long
+    Dim highlightColors() As Long
+    Dim colorIndex As Long
+    Dim openRange As Range
+    Dim closeRange As Range
     
-    highlightColor = RGB(173, 216, 230) ' LightBlue
+    ' 두 Range의 위치를 비교하여 여는 괄호와 닫는 괄호를 구분
+    If bracket1Range.Start < bracket2Range.Start Then
+        ' bracket1Range가 앞에 있으면 여는 괄호
+        Set openRange = bracket1Range.Duplicate
+        Set closeRange = bracket2Range.Duplicate
+    Else
+        ' bracket2Range가 앞에 있으면 여는 괄호
+        Set openRange = bracket2Range.Duplicate
+        Set closeRange = bracket1Range.Duplicate
+    End If
+    
+    ' 눈에 잘 띄는 색상 팔레트 정의
+    ReDim highlightColors(0 To 7)
+    highlightColors(0) = RGB(255, 100, 100) ' 형광 빨강
+    highlightColors(1) = RGB(100, 150, 255) ' 형광 파랑
+    highlightColors(2) = RGB(255, 100, 255) ' 형광 핑크
+    highlightColors(3) = RGB(100, 255, 100) ' 형광 초록
+    highlightColors(4) = RGB(255, 255, 100) ' 형광 노랑
+    highlightColors(5) = RGB(100, 255, 255) ' 형광 청록
+    highlightColors(6) = RGB(255, 180, 50) ' 형광 주황
+    highlightColors(7) = RGB(200, 100, 255) ' 형광 보라
     
     ' 화면 업데이트 일시 중지
     Application.ScreenUpdating = False
@@ -287,25 +324,8 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
         isUndoRecordActive = True
     End If
     
-    ' 첫 번째 괄호의 원래 배경색 저장
-    Dim originalColor1 As Long
-    originalColor1 = bracket1Range.Shading.BackgroundPatternColor
-    
-    ' 두 번째 괄호의 원래 배경색 저장
-    Dim originalColor2 As Long
-    originalColor2 = bracket2Range.Shading.BackgroundPatternColor
-    
-    ' 첫 번째 괄호 하이라이트 (파란색)
-    bracket1Range.Shading.BackgroundPatternColor = highlightColor
-    
-    ' 두 번째 괄호 하이라이트 (파란색)
-    bracket2Range.Shading.BackgroundPatternColor = highlightColor
-    
-    ' 하이라이트된 범위와 원래 배경색 저장
-    previousBracketRanges.Add bracket1Range.Duplicate
-    previousBracketColors.Add originalColor1
-    previousBracketRanges.Add bracket2Range.Duplicate
-    previousBracketColors.Add originalColor2
+    ' 메인 괄호쌍과 중첩된 모든 괄호쌍 하이라이트
+    Call HighlightNestedBrackets(openRange, closeRange, highlightColors)
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -322,6 +342,111 @@ ErrorHandler:
         Application.UndoRecord.EndCustomRecord
         isUndoRecordActive = False
     End If
+End Sub
+
+' 중첩된 모든 괄호쌍을 찾아 하이라이트하는 함수
+' 단순한 스택 알고리즘: 여는 괄호는 스택에 추가, 닫는 괄호는 스택에서 꺼내기
+' 같은 깊이의 괄호는 같은 색으로 칠함 (스택 크기를 기준으로 깊이 결정)
+' 가장 바깥 괄호와 같은 종류의 괄호만 표시
+Private Sub HighlightNestedBrackets(openRange As Range, closeRange As Range, colors() As Long)
+    On Error GoTo ErrorHandler
+    
+    Dim startPos As Long
+    Dim endPos As Long
+    Dim currentPos As Long
+    Dim char As String
+    Dim docRange As Range
+    Dim bracketStack As Collection ' 스택: 여는 괄호의 Range 저장
+    Dim depth As Long ' 현재 깊이 (스택 크기 + 1)
+    Dim mainBracketType As String ' 메인 괄호쌍의 종류
+    
+    startPos = openRange.Start + 1 ' 여는 괄호 다음 위치부터
+    endPos = closeRange.Start ' 닫는 괄호 이전 위치까지
+    
+    ' 메인 괄호쌍의 종류 저장
+    mainBracketType = GetBracketType(openRange.Text)
+    
+    ' 메인 괄호쌍 하이라이트 (깊이 0)
+    Dim originalColor1 As Long
+    Dim originalColor2 As Long
+    originalColor1 = openRange.Shading.BackgroundPatternColor
+    originalColor2 = closeRange.Shading.BackgroundPatternColor
+    
+    openRange.Shading.BackgroundPatternColor = colors(0 Mod (UBound(colors) + 1))
+    closeRange.Shading.BackgroundPatternColor = colors(0 Mod (UBound(colors) + 1))
+    
+    previousBracketRanges.Add openRange.Duplicate
+    previousBracketColors.Add originalColor1
+    previousBracketRanges.Add closeRange.Duplicate
+    previousBracketColors.Add originalColor2
+    
+    ' 스택 초기화
+    Set bracketStack = New Collection
+    
+    ' 괄호 범위 내에서 모든 괄호쌍 찾기
+    currentPos = startPos
+    Do While currentPos < endPos
+        Set docRange = ActiveDocument.Range(currentPos, currentPos + 1)
+        char = docRange.Text
+        
+        ' 괄호인지 확인하고, 메인 괄호쌍과 같은 종류인지 확인
+        If IsBracket(char) And GetBracketType(char) = mainBracketType Then
+            If IsOpenBracket(char) Then
+                ' 여는 괄호: 스택에 추가 (메인 괄호쌍과 같은 종류만)
+                bracketStack.Add docRange.Duplicate
+            ElseIf IsCloseBracket(char) Then
+                ' 닫는 괄호: 스택에서 꺼내기
+                If bracketStack.Count > 0 Then
+                    ' 스택의 맨 위(마지막) 요소 가져오기
+                    Dim openBracketRange As Range
+                    Dim closeBracketRange As Range
+                    Dim stackChar As String
+                    
+                    Set openBracketRange = bracketStack(bracketStack.Count)
+                    stackChar = openBracketRange.Text
+                    
+                    ' 같은 종류의 괄호인지 확인 (이미 mainBracketType과 같은지만 확인했지만, 스택의 괄호와도 확인)
+                    If GetBracketType(stackChar) = GetBracketType(char) Then
+                        ' 짝을 찾음: 깊이 확인 후 하이라이트 적용
+                        ' 현재 깊이는 스택 크기 (제거하기 전, 여는 괄호가 추가되기 전의 깊이 + 1)
+                        ' 메인 괄호쌍이 깊이 0이므로, 첫 번째 중첩은 깊이 1
+                        depth = bracketStack.Count
+                        
+                        ' 최대 깊이를 초과하지 않으면 하이라이트 적용
+                        If depth <= maxBracketDepth Then
+                            Set closeBracketRange = docRange.Duplicate
+                            
+                            ' 원래 배경색 저장
+                            Dim origColorOpen As Long
+                            Dim origColorClose As Long
+                            origColorOpen = openBracketRange.Shading.BackgroundPatternColor
+                            origColorClose = closeBracketRange.Shading.BackgroundPatternColor
+                            
+                            ' 하이라이트 적용 (깊이를 색상 인덱스로 사용)
+                            openBracketRange.Shading.BackgroundPatternColor = colors(depth Mod (UBound(colors) + 1))
+                            closeBracketRange.Shading.BackgroundPatternColor = colors(depth Mod (UBound(colors) + 1))
+                            
+                            ' 저장
+                            previousBracketRanges.Add openBracketRange.Duplicate
+                            previousBracketColors.Add origColorOpen
+                            previousBracketRanges.Add closeBracketRange.Duplicate
+                            previousBracketColors.Add origColorClose
+                        End If
+                        
+                        ' 스택에서 제거 (깊이와 관계없이 제거해야 다음 괄호 매칭이 올바르게 됨)
+                        bracketStack.Remove bracketStack.Count
+                    End If
+                End If
+            End If
+        End If
+        
+        currentPos = currentPos + 1
+    Loop
+    
+    Exit Sub
+    
+ErrorHandler:
+    Debug.Print "중첩 괄호 하이라이트 중 오류: " & Err.Description
 End Sub
 
 ' 이전 하이라이트 제거 함수
