@@ -13,10 +13,10 @@ Public WithEvents appWord As Word.Application
 Private Sub appWord_WindowSelectionChange(ByVal Sel As Selection)
 
     ' bracketMatcher 모듈의 함수 호출 (괄호 매칭 및 하이라이트)
-    Call OnBracketMatch
+    Call HighlightBracket
 
-    ' selectionAutoSearch 모듈의 함수 호출 (자동 검색 및 하이라이트)
-    'Call OnSelectionChanged
+    ' currWordHighlighter 모듈의 함수 호출 (현재 단어 하이라이트)
+    Call HighlightCurrWord
 
 End Sub
 

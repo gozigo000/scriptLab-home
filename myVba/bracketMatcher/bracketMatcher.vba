@@ -4,13 +4,13 @@
 '
 ' 사용 방법:
 ' 1. 이 모듈을 Word VBA 프로젝트에 추가합니다.
-' 2. clsAppEvents 클래스 모듈을 수정하여 OnBracketMatch 함수를 호출하도록 합니다.
+' 2. clsAppEvents 클래스 모듈을 수정하여 HighlightBracket 함수를 호출하도록 합니다.
 '    (clsAppEvents.cls 파일의 appWord_WindowSelectionChange 이벤트에 추가)
 ' 3. ThisDocument 모듈에서 Document_Open 이벤트에 InitializeBracketMatcher 호출 추가
 ' 
 
 ' 모듈 레벨 변수
-Public isBracketMatcherEnabled As Boolean ' 기능 ON/OFF 토글 (True=동작)
+Public isBracketMatcherEnabled As Boolean ' 기능 ON/OFF 토글 (True=활성화)
 Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 = 1단계 중첩까지, ...)
 Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
 Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호 범위들 저장
@@ -21,7 +21,7 @@ Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
 
 ' 초기화 프로시저
 Public Sub InitializeBracketMatcher()
-    isBracketMatcherEnabled = True ' 초기 상태: 켜짐
+    isBracketMatcherEnabled = False ' 초기 상태: 비활성화
     maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
     isUndoRecordActive = False
     Set previousBracketRanges = New Collection
@@ -41,7 +41,7 @@ Public Sub ToggleBracketMatcher()
     If isBracketMatcherEnabled Then
         ' 켤 때 현재 커서 위치에서 괄호 매칭 및 하이라이트
         On Error Resume Next
-        Call OnBracketMatch
+        Call HighlightBracket
         On Error GoTo 0
     Else
         ' 끌 때는 즉시 하이라이트 정리 + UndoRecord 종료
@@ -67,7 +67,7 @@ End Sub
 
 ' 괄호 매칭 및 하이라이트 함수
 ' 이 함수는 clsAppEvents 클래스 모듈에서 appWord_WindowSelectionChange 이벤트로 호출됨
-Public Sub OnBracketMatch()
+Public Sub HighlightBracket()
     ' 선택 영역의 길이가 0이 아니면 종료 (텍스트가 선택된 경우)
     If Selection.Type <> wdSelectionIP Then
         ' 선택 영역이 있으면 이전 하이라이트만 제거하고 종료
@@ -425,7 +425,7 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
         Set innerRange = ActiveDocument.Range(openRange.End, closeRange.Start)
         innerText = innerRange.Text
         If IsDigitOnly(innerText) Then
-            ' 이전 하이라이트는 이미 OnBracketMatch에서 제거됨.
+            ' 이전 하이라이트는 이미 HighlightBracket에서 제거됨.
             ' 현재는 하이라이트를 하지 않으므로 CustomRecord가 열려있으면 종료.
             If isUndoRecordActive Then
                 On Error Resume Next

@@ -5,16 +5,16 @@
 ' VBA 편집기에서:
 ' 1. 프로젝트 탐색기에서 "ThisDocument" 더블 클릭
 ' 2. 아래 코드를 붙여넣기
-'
-' 이 코드는 다음 기능들을 초기화합니다:
-' - selectionBold: 선택 영역 자동 볼드 처리
-' - selectionAutoSearch: 선택 영역 자동 검색 및 하이라이트
 
 Dim myAppEvents As clsAppEvents
 
 Private Sub Document_Open()
-    ' selectionAutoSearch 초기화
-    'Call InitializeSelectionAutoSearch
+    ' currWordHighlighter 초기화
+    Call InitializeCurrWordHighlighter
+    ' currWordHighlighter 토글 단축키 등록 (Alt+W)
+    Call RegisterHotkey("ToggleCurrWordHighlighter", BuildKeyCode(wdKeyAlt, wdKeyW))
+    ' TOC 범위 제한 토글 단축키 등록 (Alt+T)
+    Call RegisterHotkey("ToggleTocScopeOnly", BuildKeyCode(wdKeyAlt, wdKeyT))
     
     ' bracketMatcher 초기화
     Call InitializeBracketMatcher
