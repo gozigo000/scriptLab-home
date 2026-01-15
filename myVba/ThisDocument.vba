@@ -18,6 +18,8 @@ Private Sub Document_Open()
     
     ' bracketMatcher 초기화
     Call InitializeBracketMatcher
+    ' bracketMatcher 단축키 등록 (Alt+B)
+    Call RegisterHotkey("ToggleBracketMatcher", BuildKeyCode(wdKeyAlt, wdKeyB))
     
     ' 클래스 인스턴스 생성 및 Application 객체 연결
     ' 이 클래스는 WindowSelectionChange 이벤트를 처리합니다.
@@ -25,3 +27,25 @@ Private Sub Document_Open()
     Set myAppEvents.appWord = Word.Application
 End Sub
 
+
+' 단축키 등록 함수
+' - Command: 실행할 매크로 이름(문자열)
+' - KeyCode: BuildKeyCode(wdKeyAlt, wdKeyB) 같은 값
+Private Sub RegisterHotkey(ByVal Command As String, ByVal KeyCode As Long)
+    On Error GoTo SafeExit
+    
+    ' 매크로가 들어있는 템플릿에 키 바인딩을 저장 (문서별로 관리하기 쉬움)
+    Application.CustomizationContext = ActiveDocument.AttachedTemplate
+    
+    Dim kb As KeyBinding
+    Set kb = Application.FindKey(KeyCode)
+    If Not kb Is Nothing Then
+        kb.Clear
+    End If
+    
+    Application.KeyBindings.Add KeyCategory:=wdKeyCategoryMacro, _
+                                Command:=Command, _
+                                KeyCode:=KeyCode
+    
+SafeExit:
+End Sub

@@ -8,28 +8,63 @@
 '    (clsAppEvents.cls 파일의 appWord_WindowSelectionChange 이벤트에 추가)
 ' 3. ThisDocument 모듈에서 Document_Open 이벤트에 InitializeBracketMatcher 호출 추가
 ' 
-' TODO: 괄호 안 &&, ||, +, ',', ?, : 등의 문자도 빨간색으로 칠하기
 ' TODO: 괄호 안쪽 수정하거나, 닫는 괄호 왼쪽에서 수정하면 괄호 매칭 끝내도록 수정하기 (for 일반 글자에도 배경색이 적용되는 문제 해결)
 ' TODO: 괄호 안에 한글, 숫자만 있는 경우에는 괄호 매칭 안하기
 
 ' 모듈 레벨 변수
+Public isBracketMatcherEnabled As Boolean ' 기능 ON/OFF 토글 (True=동작)
+Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 = 1단계 중첩까지, ...)
+Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
 Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호 범위들 저장
 Public previousBracketColors As Collection ' 이전 괄호의 원래 배경색 저장
 Public previousOperatorRanges As Collection ' 이전에 빨강 처리된 연산자 범위들 저장
 Public previousOperatorColors As Collection ' 이전 연산자의 원래 글자색 저장
 Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
-Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
-Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 = 1단계 중첩까지, ...)
 
 ' 초기화 프로시저
 Public Sub InitializeBracketMatcher()
+    isBracketMatcherEnabled = True ' 초기 상태: 켜짐
+    maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
+    isUndoRecordActive = False
     Set previousBracketRanges = New Collection
     Set previousBracketColors = New Collection
     Set previousOperatorRanges = New Collection
     Set previousOperatorColors = New Collection
     isProcessingBracketMatch = False
-    isUndoRecordActive = False
-    maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
+End Sub
+
+' 기능 토글 매크로 (수동 실행용)
+' - 실행할 때마다 ON/OFF가 바뀜
+Public Sub ToggleBracketMatcher()
+    Call EnsureBracketMatcherInitialized
+    
+    isBracketMatcherEnabled = Not isBracketMatcherEnabled
+    
+    If isBracketMatcherEnabled Then
+        ' 켤 때 현재 커서 위치에서 괄호 매칭 및 하이라이트
+        On Error Resume Next
+        Call OnBracketMatch
+        On Error GoTo 0
+    Else
+        ' 끌 때는 즉시 하이라이트 정리 + UndoRecord 종료
+        On Error Resume Next
+        Call RemoveBracketHighlight
+        If isUndoRecordActive Then
+            Application.UndoRecord.EndCustomRecord
+            isUndoRecordActive = False
+        End If
+        On Error GoTo 0
+    End If
+    
+    Debug.Print "BracketMatcher Enabled = " & CStr(isBracketMatcherEnabled)
+End Sub
+
+' 필요 시 초기화 (컬렉션이 Nothing이면 초기화)
+Private Sub EnsureBracketMatcherInitialized()
+    If previousBracketRanges Is Nothing Or previousBracketColors Is Nothing Or _
+       previousOperatorRanges Is Nothing Or previousOperatorColors Is Nothing Then
+        Call InitializeBracketMatcher
+    End If
 End Sub
 
 ' 괄호 매칭 및 하이라이트 함수
@@ -51,6 +86,18 @@ Public Sub OnBracketMatch()
     
     ' 무한루프 방지: 이미 처리 중이면 종료
     If isProcessingBracketMatch Then
+        Exit Sub
+    End If
+
+    ' 기능이 꺼져있으면 하이라이트만 정리하고 종료
+    If Not isBracketMatcherEnabled Then
+        On Error Resume Next
+        Call RemoveBracketHighlight
+        If isUndoRecordActive Then
+            Application.UndoRecord.EndCustomRecord
+            isUndoRecordActive = False
+        End If
+        On Error GoTo 0
         Exit Sub
     End If
     
@@ -521,7 +568,7 @@ Private Sub HighlightOperatorsAtDepth0(openRange As Range, closeRange As Range)
             End If
             
             ' 단일 문자 처리
-            If ch = "+" Or ch = "," Or ch = "?" Or ch = ":" Or ch = ";" Then
+            If ch = "+" Or ch = "-" Or ch = "," Or ch = "?" Or ch = ":" Or ch = ";" Then
                 Call ApplyRedFontAndRemember(r)
             End If
         End If
