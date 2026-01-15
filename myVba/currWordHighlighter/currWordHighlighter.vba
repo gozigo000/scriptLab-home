@@ -27,24 +27,11 @@ Public isCurrWordHighlighterEnabled As Boolean ' 기능 ON/OFF 토글 (True=활�
 Public previousSelectedText As String
 Public isProcessingSelectionChange As Boolean ' 무한루프 방지 플래그
 
-' True  = 커서가 속한 TOC(목차) 범위에서만 하이라이트/제거
-' False = 문서 전체에서 하이라이트/제거
-Public isTocScopeOnly As Boolean
-
-' 마지막으로 하이라이트를 적용했던 TOC 범위(시작/끝)
-' - 커서가 TOC 밖으로 나갔을 때도 이전 하이라이트를 제거할 수 있도록 저장
-Private previousTocStart As Long
-Private previousTocEnd As Long
-
 ' 초기화 프로시저 (이 모듈이 로드될 때 호출)
 Public Sub InitializeCurrWordHighlighter()
     isCurrWordHighlighterEnabled = True ' 초기 상태: 활성화
     previousSelectedText = ""
     isProcessingSelectionChange = False
-    ' isTocScopeOnly = True ' 초기 상태: TOC 범위만 하이라이트
-    isTocScopeOnly = False ' 초기 상태: 문서 전체 하이라이트
-    previousTocStart = 0
-    previousTocEnd = 0
 End Sub
 
 ' 선택 영역 자동 검색 기능 토글
@@ -60,37 +47,9 @@ Public Sub ToggleCurrWordHighlighter()
         If previousSelectedText <> "" Then
             Call RemoveHighlight(previousSelectedText)
             previousSelectedText = ""
-            previousTocStart = 0
-            previousTocEnd = 0
         End If
         Call showMsg("선택 영역 자동 검색이 비활성화되었습니다.", "알림", vbInformation, 1000)
     End If
-End Sub
-
-' TOC 범위 제한 토글 (Alt+T에 연결)
-Public Sub ToggleTocScopeOnly()
-    On Error GoTo SafeExit
-    
-    ' 현재 설정 기준으로 기존 하이라이트를 먼저 제거
-    If previousSelectedText <> "" Then
-        Call RemoveHighlight(previousSelectedText)
-    End If
-    
-    ' 범위 제한 토글
-    isTocScopeOnly = Not isTocScopeOnly
-    
-    ' 상태 초기화 (다음 SelectionChange에서 새로 하이라이트)
-    previousSelectedText = ""
-    previousTocStart = 0
-    previousTocEnd = 0
-    
-    If isTocScopeOnly Then
-        Call showMsg("TOC(목차) 범위로 제한: ON", "알림", vbInformation, 1000)
-    Else
-        Call showMsg("TOC(목차) 범위로 제한: OFF (문서 전체)", "알림", vbInformation, 1000)
-    End If
-    
-SafeExit:
 End Sub
 
 ' 이전 하이라이트 제거 함수
@@ -107,9 +66,8 @@ Public Sub RemoveHighlight(searchText As String)
     ' 화면 업데이트 일시 중지 (이벤트 발생 감소)
     Application.ScreenUpdating = False
     
-    ' 검색/제거 범위 결정 (TOC 제한 여부 설정에 따름)
-    Set scopeRange = GetHighlightScopeRangeForRemove()
-    If scopeRange Is Nothing Then GoTo SafeExit
+    ' 검색/제거 범위: 문서 전체
+    Set scopeRange = ActiveDocument.Content
     
     Set findRange = scopeRange.Duplicate
     
@@ -176,153 +134,51 @@ Public Sub HighlightCurrWord()
     
     On Error GoTo ErrorHandler
     
-    Dim selectedText As String
     Dim findRange As Range
     Dim originalRange As Range
     Dim scopeRange As Range
     Dim currentWord As String
     
-    ' 선택된 텍스트가 없으면(커서만 있는 상태) -> 커서 위치 단어를 TOC에서만 하이라이트
-    If Selection.Type = wdSelectionIP Then
-        currentWord = GetWordAtCursor()
-        
-        ' 케이스 조건(camel/snake/pascal) 불만족 또는 빈 문자열이면 이전 하이라이트만 제거
-        If currentWord = "" Or Not IsTargetIdentifierCase(currentWord) Then
-            If previousSelectedText <> "" Then
-                Call RemoveHighlight(previousSelectedText)
-                previousSelectedText = ""
-                previousTocStart = 0
-                previousTocEnd = 0
-            End If
-            isProcessingSelectionChange = False
-            Exit Sub
-        End If
-        
-        ' 이전 단어와 동일하면 유지
-        If currentWord = previousSelectedText Then
-            isProcessingSelectionChange = False
-            Exit Sub
-        End If
-        
-        ' 현재 커서 위치 저장 (Range 객체로 저장)
-        Set originalRange = Selection.Range.Duplicate
-        
-        ' 하이라이트 범위 가져오기 (TOC 제한 여부 설정에 따름)
-        Set scopeRange = GetHighlightScopeRange()
-        If scopeRange Is Nothing Then
-            ' (TOC 제한 ON이고 커서가 TOC 밖인 경우 등) -> 기존 하이라이트 제거 후 종료
-            If previousSelectedText <> "" Then
-                Call RemoveHighlight(previousSelectedText)
-                previousSelectedText = ""
-                previousTocStart = 0
-                previousTocEnd = 0
-            End If
-            isProcessingSelectionChange = False
-            Exit Sub
-        End If
-        
-        ' 이전 하이라이트 제거
-        If previousSelectedText <> "" Then
-            Call RemoveHighlight(previousSelectedText)
-        End If
-        
-        ' 화면 업데이트 일시 중지 (이벤트 발생 감소)
-        Application.ScreenUpdating = False
-        
-        ' 목차(TOC) 범위에서만 동일 단어 검색
-        Set findRange = scopeRange.Duplicate
-        With findRange.Find
-            .ClearFormatting
-            .Text = currentWord
-            .MatchCase = True
-            .MatchWholeWord = False
-            .MatchWildcards = False
-            .Forward = True
-            .Wrap = wdFindStop
-            
-            Do While .Execute
-                If IsBoundaryMatch(findRange, scopeRange) Then
-                    findRange.Shading.BackgroundPatternColor = GetTocHighlightColor()
-                End If
-                findRange.Collapse wdCollapseEnd
-            Loop
-        End With
-        
-        Application.ScreenUpdating = True
-        
-        ' 원래 커서 위치로 복원
-        Selection.SetRange originalRange.Start, originalRange.End
-        
-        previousSelectedText = currentWord
-        If isTocScopeOnly Then
-            previousTocStart = scopeRange.Start
-            previousTocEnd = scopeRange.End
-        Else
-            previousTocStart = 0
-            previousTocEnd = 0
-        End If
-        isProcessingSelectionChange = False
-        Exit Sub
-    End If
-
-    ' 선택된 텍스트가 있는 경우에도(드래그 선택) TOC에서만 동일 단어를 하이라이트
-    selectedText = Trim(Selection.Text)
-    
-    ' 줄바꿈 포함 시 무시
-    If InStr(selectedText, vbCrLf) > 0 Or InStr(selectedText, vbLf) > 0 Or InStr(selectedText, vbCr) > 0 Then
+    ' 텍스트가 선택(드래그)된 경우에는 하이라이트하지 않음
+    If Selection.Type <> wdSelectionIP Then
         isProcessingSelectionChange = False
         Exit Sub
     End If
     
-    ' 선택 문자열 정리 (앞/뒤 구두점 제거)
-    currentWord = TrimNonIdentifierEdges(Trim$(selectedText))
-    
-    ' 공백/탭 포함 또는 케이스 조건 불만족이면 이전 하이라이트 제거 후 종료
-    If currentWord = "" Or InStr(1, currentWord, " ", vbBinaryCompare) > 0 Or InStr(1, currentWord, vbTab, vbBinaryCompare) > 0 _
-        Or Not IsTargetIdentifierCase(currentWord) Then
+    ' 커서만 있는 상태 -> 커서 위치 단어를 문서 전체에서 하이라이트
+    currentWord = GetWordAtCursor()
         
+    ' 케이스 조건(camel/snake/pascal) 불만족 또는 빈 문자열이면 이전 하이라이트만 제거
+    If currentWord = "" Or Not IsTargetIdentifierCase(currentWord) Then
         If previousSelectedText <> "" Then
             Call RemoveHighlight(previousSelectedText)
             previousSelectedText = ""
-            previousTocStart = 0
-            previousTocEnd = 0
         End If
-        
         isProcessingSelectionChange = False
         Exit Sub
     End If
-    
+        
     ' 이전 단어와 동일하면 유지
     If currentWord = previousSelectedText Then
         isProcessingSelectionChange = False
         Exit Sub
     End If
-    
-    ' 현재 선택/커서 위치 저장
+        
+    ' 현재 커서 위치 저장 (Range 객체로 저장)
     Set originalRange = Selection.Range.Duplicate
-    
-    ' 하이라이트 범위 가져오기 (TOC 제한 여부 설정에 따름)
-    Set scopeRange = GetHighlightScopeRange()
-    If scopeRange Is Nothing Then
-        ' (TOC 제한 ON이고 커서가 TOC 밖인 경우 등) -> 기존 하이라이트 제거 후 종료
-        If previousSelectedText <> "" Then
-            Call RemoveHighlight(previousSelectedText)
-            previousSelectedText = ""
-            previousTocStart = 0
-            previousTocEnd = 0
-        End If
-        isProcessingSelectionChange = False
-        Exit Sub
-    End If
-    
+        
+    ' 하이라이트 범위: 문서 전체
+    Set scopeRange = ActiveDocument.Content
+        
     ' 이전 하이라이트 제거
     If previousSelectedText <> "" Then
         Call RemoveHighlight(previousSelectedText)
     End If
-    
+        
+    ' 화면 업데이트 일시 중지 (이벤트 발생 감소)
     Application.ScreenUpdating = False
-    
-    ' 목차에서만 동일 단어 검색 후 연한 녹색 배경 적용
+        
+    ' 문서 전체에서 동일 단어 검색
     Set findRange = scopeRange.Duplicate
     With findRange.Find
         .ClearFormatting
@@ -345,13 +201,6 @@ Public Sub HighlightCurrWord()
     Selection.SetRange originalRange.Start, originalRange.End
     
     previousSelectedText = currentWord
-    If isTocScopeOnly Then
-        previousTocStart = scopeRange.Start
-        previousTocEnd = scopeRange.End
-    Else
-        previousTocStart = 0
-        previousTocEnd = 0
-    End If
     isProcessingSelectionChange = False
     Exit Sub
     
@@ -366,7 +215,7 @@ ErrorHandler:
 End Sub
 
 ' ======================
-' TOC 커서 단어 하이라이트용 유틸
+' 커서 단어 하이라이트용 유틸
 ' ======================
 
 ' 현재 커서 위치의 "단어"를 가져와 식별자 형태로 정리
@@ -394,78 +243,6 @@ Private Function GetWordAtCursor() As String
     
 SafeExit:
     GetWordAtCursor = ""
-End Function
-
-' 목차 범위를 가져온다.
-' - 커서가 목차 안에 있으면 그 목차
-' - 아니면 Nothing (커서가 속한 TOC만 허용)
-Private Function GetCurrentTocRange() As Range
-    On Error GoTo SafeExit
-    
-    Dim doc As Document
-    Dim i As Long
-    Dim selPos As Long
-    
-    Set doc = ActiveDocument
-    If doc.TablesOfContents.Count = 0 Then GoTo SafeExit
-    
-    selPos = Selection.Range.Start
-    
-    For i = 1 To doc.TablesOfContents.Count
-        If selPos >= doc.TablesOfContents(i).Range.Start And selPos <= doc.TablesOfContents(i).Range.End Then
-            Set GetCurrentTocRange = doc.TablesOfContents(i).Range
-            Exit Function
-        End If
-    Next i
-    
-SafeExit:
-    Set GetCurrentTocRange = Nothing
-End Function
-
-' 하이라이트 범위:
-' - isTocScopeOnly=True  -> 커서가 속한 TOC 범위(없으면 Nothing)
-' - isTocScopeOnly=False -> 문서 전체
-Private Function GetHighlightScopeRange() As Range
-    On Error GoTo SafeExit
-    
-    If Not isTocScopeOnly Then
-        Set GetHighlightScopeRange = ActiveDocument.Content
-        Exit Function
-    End If
-    
-    Set GetHighlightScopeRange = GetCurrentTocRange()
-    Exit Function
-    
-SafeExit:
-    Set GetHighlightScopeRange = Nothing
-End Function
-
-' 제거 범위:
-' - isTocScopeOnly=True  -> 현재 TOC, 없으면 이전에 칠했던 TOC(있을 때)
-' - isTocScopeOnly=False -> 문서 전체
-Private Function GetHighlightScopeRangeForRemove() As Range
-    On Error GoTo SafeExit
-    
-    Dim r As Range
-    
-    If Not isTocScopeOnly Then
-        Set GetHighlightScopeRangeForRemove = ActiveDocument.Content
-        Exit Function
-    End If
-    
-    Set r = GetCurrentTocRange()
-    If Not r Is Nothing Then
-        Set GetHighlightScopeRangeForRemove = r
-        Exit Function
-    End If
-    
-    If previousTocStart > 0 And previousTocEnd > previousTocStart Then
-        Set GetHighlightScopeRangeForRemove = ActiveDocument.Range(previousTocStart, previousTocEnd)
-        Exit Function
-    End If
-    
-SafeExit:
-    Set GetHighlightScopeRangeForRemove = Nothing
 End Function
 
 ' "밝은 녹색" 배경색 반환
