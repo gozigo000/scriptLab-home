@@ -18,7 +18,7 @@ Private Sub Document_Open()
     
     ' bracketMatcher 초기화
     Call InitializeBracketMatcher
-    ' bracketMatcher 단축키 등록 (Alt+B)
+    ' bracketMatcher 토글 단축키 등록 (Alt+B)
     Call RegisterHotkey("ToggleBracketMatcher", BuildKeyCode(wdKeyAlt, wdKeyB))
     
     ' 클래스 인스턴스 생성 및 Application 객체 연결

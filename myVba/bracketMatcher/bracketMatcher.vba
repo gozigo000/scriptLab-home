@@ -8,8 +8,6 @@
 '    (clsAppEvents.cls 파일의 appWord_WindowSelectionChange 이벤트에 추가)
 ' 3. ThisDocument 모듈에서 Document_Open 이벤트에 InitializeBracketMatcher 호출 추가
 ' 
-' TODO: 괄호 안쪽 수정하거나, 닫는 괄호 왼쪽에서 수정하면 괄호 매칭 끝내도록 수정하기 (for 일반 글자에도 배경색이 적용되는 문제 해결)
-' TODO: 괄호 안에 한글, 숫자만 있는 경우에는 괄호 매칭 안하기
 
 ' 모듈 레벨 변수
 Public isBracketMatcherEnabled As Boolean ' 기능 ON/OFF 토글 (True=동작)
@@ -116,8 +114,8 @@ Public Sub OnBracketMatch()
     Set originalRange = Selection.Range.Duplicate
     cursorPos = Selection.Start
     
-    ' 괄호 검색 범위 제한: 현재 문단 기준 위/아래 5개 문단까지만
-    Set searchBounds = GetBracketSearchBoundsAroundCursor(5)
+    ' 괄호 검색 범위 제한: 현재 문단 기준 위/아래 1개 문단까지만
+    Set searchBounds = GetBracketSearchBoundsAroundCursor(1)
     
     ' 이전 하이라이트 제거
     Call RemoveBracketHighlight
@@ -421,12 +419,12 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
         Set closeRange = bracket1Range.Duplicate
     End If
 
-    ' 괄호 내부가 "한글 + 숫자"만이면 하이라이트하지 않음
-    ' (예: (가123), (2026가), (가 12) 등 - 공백/개행은 무시)
+    ' 괄호 내부가 "숫자"만이면 하이라이트하지 않음
+    ' (예: (123), ( 2026 ), (12 34) 등 - 공백/개행은 무시)
     If openRange.End <= closeRange.Start Then
         Set innerRange = ActiveDocument.Range(openRange.End, closeRange.Start)
         innerText = innerRange.Text
-        If IsHangulOrDigitOnly(innerText) Then
+        If IsDigitOnly(innerText) Then
             ' 이전 하이라이트는 이미 OnBracketMatch에서 제거됨.
             ' 현재는 하이라이트를 하지 않으므로 CustomRecord가 열려있으면 종료.
             If isUndoRecordActive Then
@@ -784,8 +782,8 @@ ErrorHandler:
     Set previousOperatorColors = New Collection
 End Sub
 
-' 괄호 내부 문자열이 "한글 + 숫자"로만 구성되어 있는지 확인 (공백/개행은 무시)
-Private Function IsHangulOrDigitOnly(ByVal s As String) As Boolean
+' 괄호 내부 문자열이 "숫자"로만 구성되어 있는지 확인 (공백/개행은 무시)
+Private Function IsDigitOnly(ByVal s As String) As Boolean
     Dim t As String
     Dim re As Object
     
@@ -797,7 +795,7 @@ Private Function IsHangulOrDigitOnly(ByVal s As String) As Boolean
     t = Replace(t, vbLf, "")
     
     If Len(t) = 0 Then
-        IsHangulOrDigitOnly = False
+        IsDigitOnly = False
         Exit Function
     End If
     
@@ -805,7 +803,7 @@ Private Function IsHangulOrDigitOnly(ByVal s As String) As Boolean
     Set re = CreateObject("VBScript.RegExp")
     re.Global = False
     re.IgnoreCase = True
-    re.Pattern = "^[0-9가-힣]+$"
+    re.Pattern = "^[0-9]+$"
     
-    IsHangulOrDigitOnly = re.Test(t)
+    IsDigitOnly = re.Test(t)
 End Function
