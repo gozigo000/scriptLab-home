@@ -15,6 +15,8 @@
 ' 모듈 레벨 변수
 Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호 범위들 저장
 Public previousBracketColors As Collection ' 이전 괄호의 원래 배경색 저장
+Public previousOperatorRanges As Collection ' 이전에 빨강 처리된 연산자 범위들 저장
+Public previousOperatorColors As Collection ' 이전 연산자의 원래 글자색 저장
 Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
 Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
 Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 = 1단계 중첩까지, ...)
@@ -23,6 +25,8 @@ Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 =
 Public Sub InitializeBracketMatcher()
     Set previousBracketRanges = New Collection
     Set previousBracketColors = New Collection
+    Set previousOperatorRanges = New Collection
+    Set previousOperatorColors = New Collection
     isProcessingBracketMatch = False
     isUndoRecordActive = False
     maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
@@ -419,6 +423,9 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     
     ' 메인 괄호쌍과 중첩된 모든 괄호쌍 하이라이트
     Call HighlightNestedBrackets(openRange, closeRange, highlightColors)
+
+    ' 깊이 0(메인 괄호 내부)에서만 특정 연산자/기호를 빨강 글자색으로 표시
+    Call HighlightOperatorsAtDepth0(openRange, closeRange)
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -435,6 +442,128 @@ ErrorHandler:
         Application.UndoRecord.EndCustomRecord
         isUndoRecordActive = False
     End If
+End Sub
+
+' 메인(깊이 0) 괄호 내부에서만 특정 문자/연산자의 글자색을 빨강으로 표시
+' - 대상: &&, ||, +, ',', ?, :, ;
+' - "깊이 0" = 메인 괄호쌍 내부이되, 같은 종류 괄호로 중첩된 구간(깊이>=1) 제외
+Private Sub HighlightOperatorsAtDepth0(openRange As Range, closeRange As Range)
+    On Error GoTo ErrorHandler
+    
+    Dim startPos As Long
+    Dim endPos As Long
+    Dim pos As Long
+    Dim depth As Long
+    Dim mainType As String
+    Dim r As Range
+    Dim ch As String
+    
+    startPos = openRange.End
+    endPos = closeRange.Start
+    
+    If startPos >= endPos Then Exit Sub
+    
+    mainType = GetBracketType(openRange.Text)
+    depth = 0
+    pos = startPos
+    
+    Do While pos < endPos
+        Set r = ActiveDocument.Range(pos, pos + 1)
+        ch = r.Text
+        
+        ' 같은 종류 괄호의 중첩 깊이 추적
+        If IsBracket(ch) And GetBracketType(ch) = mainType Then
+            If IsOpenBracket(ch) Then
+                depth = depth + 1
+            ElseIf IsCloseBracket(ch) Then
+                If depth > 0 Then depth = depth - 1
+            End If
+            
+            pos = pos + 1
+            GoTo ContinueLoop
+        End If
+        
+        If depth = 0 Then
+            ' && 처리 (두 글자)
+            If ch = "&" And pos + 1 < endPos Then
+                Dim r2 As Range
+                Set r2 = ActiveDocument.Range(pos + 1, pos + 2)
+                If r2.Text = "&" Then
+                    Call ApplyRedFontAndRemember(r)
+                    Call ApplyRedFontAndRemember(r2)
+                    pos = pos + 2
+                    GoTo ContinueLoop
+                End If
+            End If
+            
+            ' || 처리 (두 글자, 중간 공백 허용: "| |"도 처리)
+            If ch = "|" And pos + 1 < endPos Then
+                Dim pos2 As Long
+                Dim rPipe2 As Range
+                
+                pos2 = pos + 1
+                Do While pos2 < endPos
+                    Dim rTmp As Range
+                    Set rTmp = ActiveDocument.Range(pos2, pos2 + 1)
+                    If Not IsWhitespaceChar(rTmp.Text) Then Exit Do
+                    pos2 = pos2 + 1
+                Loop
+                
+                If pos2 < endPos Then
+                    Set rPipe2 = ActiveDocument.Range(pos2, pos2 + 1)
+                    If rPipe2.Text = "|" Then
+                        Call ApplyRedFontAndRemember(r)
+                        Call ApplyRedFontAndRemember(rPipe2)
+                        pos = pos2 + 1
+                        GoTo ContinueLoop
+                    End If
+                End If
+            End If
+            
+            ' 단일 문자 처리
+            If ch = "+" Or ch = "," Or ch = "?" Or ch = ":" Or ch = ";" Then
+                Call ApplyRedFontAndRemember(r)
+            End If
+        End If
+        
+        pos = pos + 1
+ContinueLoop:
+    Loop
+    
+    Exit Sub
+    
+ErrorHandler:
+    Debug.Print "연산자 빨강 표시 중 오류: " & Err.Description
+End Sub
+
+' 공백 문자 판정 (|| 사이 공백 허용용)
+Private Function IsWhitespaceChar(ByVal ch As String) As Boolean
+    If ch = " " Or ch = vbTab Or ch = ChrW$(160) Then
+        IsWhitespaceChar = True
+    Else
+        IsWhitespaceChar = False
+    End If
+End Function
+
+' 글자색을 빨강으로 바꾸고, 원래 색을 복원할 수 있도록 저장
+Private Sub ApplyRedFontAndRemember(targetRange As Range)
+    On Error GoTo ErrorHandler
+    
+    If previousOperatorRanges Is Nothing Then Set previousOperatorRanges = New Collection
+    If previousOperatorColors Is Nothing Then Set previousOperatorColors = New Collection
+    
+    Dim origColor As Long
+    origColor = targetRange.Font.Color
+    
+    targetRange.Font.Color = RGB(255, 0, 0)
+    
+    previousOperatorRanges.Add targetRange.Duplicate
+    previousOperatorColors.Add origColor
+    
+    Exit Sub
+    
+ErrorHandler:
+    ' 실패해도 전체 하이라이트는 계속
 End Sub
 
 ' 중첩된 모든 괄호쌍을 찾아 하이라이트하는 함수
@@ -549,30 +678,47 @@ Public Sub RemoveBracketHighlight()
     
     Dim i As Long
     Dim highlightRange As Range
+    Dim opRange As Range
     
-    ' 이전 하이라이트가 없으면 종료 (CustomRecord는 유지)
-    If previousBracketRanges Is Nothing Then
-        Exit Sub
+    ' 이전 하이라이트가 전혀 없으면 종료 (CustomRecord는 유지)
+    Dim hasAny As Boolean
+    hasAny = False
+    If Not previousBracketRanges Is Nothing Then
+        If previousBracketRanges.Count > 0 Then hasAny = True
     End If
-    
-    If previousBracketRanges.Count = 0 Then
-        Exit Sub
+    If Not previousOperatorRanges Is Nothing Then
+        If previousOperatorRanges.Count > 0 Then hasAny = True
     End If
+    If Not hasAny Then Exit Sub
     
     ' 화면 업데이트 일시 중지
     Application.ScreenUpdating = False
     
     ' 모든 하이라이트를 원래 배경색으로 복원 (기존 UndoRecord 내에서 실행)
-    For i = 1 To previousBracketRanges.Count
-        Set highlightRange = previousBracketRanges(i)
-        Dim originalColor As Long
-        originalColor = previousBracketColors(i)
-        highlightRange.Shading.BackgroundPatternColor = originalColor
-    Next i
+    If Not previousBracketRanges Is Nothing Then
+        For i = 1 To previousBracketRanges.Count
+            Set highlightRange = previousBracketRanges(i)
+            Dim originalColor As Long
+            originalColor = previousBracketColors(i)
+            highlightRange.Shading.BackgroundPatternColor = originalColor
+        Next i
+    End If
+    
+    ' 연산자 글자색 복원
+    If Not previousOperatorRanges Is Nothing Then
+        For i = 1 To previousOperatorRanges.Count
+            Set opRange = previousOperatorRanges(i)
+            Dim origFontColor As Long
+            origFontColor = previousOperatorColors(i)
+            opRange.Font.Color = origFontColor
+        Next i
+    End If
     
     ' 컬렉션 초기화
     Set previousBracketRanges = New Collection
     Set previousBracketColors = New Collection
+    Set previousOperatorRanges = New Collection
+    Set previousOperatorColors = New Collection
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -587,6 +733,8 @@ ErrorHandler:
     ' 컬렉션 초기화
     Set previousBracketRanges = New Collection
     Set previousBracketColors = New Collection
+    Set previousOperatorRanges = New Collection
+    Set previousOperatorColors = New Collection
 End Sub
 
 ' 괄호 내부 문자열이 "한글 + 숫자"로만 구성되어 있는지 확인 (공백/개행은 무시)
