@@ -838,9 +838,7 @@ End Function
 ' 문서 변경 여부 판단용 fingerprint (가볍게)
 Private Function MakeFingerprint(ByVal doc As Document) As String
     On Error GoTo SafeExit
-    MakeFingerprint = CStr(doc.Content.End) & "|" & _
-                      CStr(doc.ComputeStatistics(wdStatisticParagraphs)) & "|" & _
-                      CStr(doc.ComputeStatistics(wdStatisticWords))
+    MakeFingerprint = CStr(doc.Content.End)
     Exit Function
 SafeExit:
     MakeFingerprint = ""

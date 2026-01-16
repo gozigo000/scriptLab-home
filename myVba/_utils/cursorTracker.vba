@@ -13,7 +13,7 @@ Option Explicit
 ' 사용:
 ' - 매크로: ShowCursorLocationInfo 실행
 
-Public Sub ShowCursorLocationInfo()
+Public Sub a_ShowCursorLocationInfo()
     On Error GoTo ErrorHandler
     
     Dim doc As Document
@@ -28,15 +28,13 @@ Public Sub ShowCursorLocationInfo()
     Dim numPages As Long
     pageNo = Selection.Information(wdActiveEndPageNumber)
     
-    ' ===== 문단 =====
-    ' Dim paraIdx As Long
-    Dim paraText As String
-    ' paraIdx = GetParagraphIndexInDocument(doc, selRng)
-    paraText = GetCurrentParagraphPreview(selRng, 120)
-    
-    ' ===== 영역 제목(탐색창/목차처럼 보이는 제목) =====
+    ' ===== 영역 제목(탐색창:목차에 보이는 제목) =====
     Dim headingTitle As String
     headingTitle = GetNearestHeadingTitle(selRng, 140)
+    
+    ' ===== 문단 =====
+    Dim paraText As String
+    paraText = GetCurrentParagraphPreview(selRng, 120)
     
     ' ===== 단어 =====
     Dim wordText As String
@@ -52,7 +50,6 @@ Public Sub ShowCursorLocationInfo()
     
     msg = ""
     msg = msg & "페이지: " & pageNo & vbCrLf
-    ' msg = msg & "문단: " & paraIdx & vbCrLf
     msg = msg & "영역 제목: " & IIf(headingTitle = "", "(없음)", headingTitle) & vbCrLf
     msg = msg & "현재 단어: " & IIf(wordText = "", "(없음)", """" & wordText & """") & vbCrLf
     msg = msg & "북마크: " & IIf(bmNames = "", "(없음)", bmNames) & vbCrLf
@@ -70,26 +67,6 @@ End Sub
 ' ======================
 ' Helpers
 ' ======================
-
-' 문서 기준 문단 인덱스(1-based). 계산 실패 시 0.
-Private Function GetParagraphIndexInDocument(ByVal doc As Document, ByVal rng As Range) As Long
-    On Error GoTo SafeExit
-    
-    Dim probe As Range
-    Set probe = doc.Range(0, rng.Start)
-    
-    ' rng.Start가 문서 첫 위치면 Paragraphs.Count가 0이 될 수 있어 보정
-    If probe.End <= 0 Then
-        GetParagraphIndexInDocument = 1
-    Else
-        GetParagraphIndexInDocument = probe.Paragraphs.Count
-        If GetParagraphIndexInDocument < 1 Then GetParagraphIndexInDocument = 1
-    End If
-    Exit Function
-    
-SafeExit:
-    GetParagraphIndexInDocument = 0
-End Function
 
 ' 현재 문단 텍스트를 잘라서(개행 제거) 미리보기로 반환
 Private Function GetCurrentParagraphPreview(ByVal rng As Range, ByVal maxLen As Long) As String
