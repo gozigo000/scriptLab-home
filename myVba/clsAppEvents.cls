@@ -17,6 +17,9 @@ Private Sub appWord_WindowSelectionChange(ByVal Sel As Selection)
 
     ' currWordHighlighter 모듈의 함수 호출 (현재 단어 하이라이트)
     Call HighlightCurrWord
+    
+    ' cursorTracker 모듈의 함수 호출 (문서별 커서 이동 히스토리 저장)
+    Call CursorHistory_LogSelectionChange(Sel)
 
 End Sub
 
