@@ -13,8 +13,6 @@ Private Sub Document_Open()
     Call InitializeCurrWordHighlighter
     ' currWordHighlighter 토글 단축키 등록 (Alt+W)
     Call RegisterHotkey("ToggleCurrWordHighlighter", BuildKeyCode(wdKeyAlt, wdKeyW))
-    ' TOC 범위 제한 토글 단축키 등록 (Alt+T)
-    Call RegisterHotkey("ToggleTocScopeOnly", BuildKeyCode(wdKeyAlt, wdKeyT))
     
     ' bracketMatcher 초기화
     Call InitializeBracketMatcher

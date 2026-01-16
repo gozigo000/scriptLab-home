@@ -15,7 +15,7 @@ Public Sub CreateHyperlinksToSelection()
     
     ' 선택 영역이 비어있거나 단어가 아닌 경우 종료
     If Selection.Type = wdSelectionIP Then
-        MsgBox "단어를 선택한 후 실행해주세요.", vbExclamation, "알림"
+        VBA.MsgBox "단어를 선택한 후 실행해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
     
@@ -31,13 +31,13 @@ Public Sub CreateHyperlinksToSelection()
     
     ' 줄바꿈 기호가 있으면 종료 (단일 단어만 지원)
     If InStr(selectedText, vbCrLf) > 0 Or InStr(selectedText, vbLf) > 0 Or InStr(selectedText, vbCr) > 0 Then
-        MsgBox "단일 단어만 선택해주세요.", vbExclamation, "알림"
+        VBA.MsgBox "단일 단어만 선택해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
     
     ' 선택된 텍스트가 비어있으면 종료
     If selectedText = "" Then
-        MsgBox "텍스트를 선택한 후 실행해주세요.", vbExclamation, "알림"
+        VBA.MsgBox "텍스트를 선택한 후 실행해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
     
@@ -240,7 +240,7 @@ Public Sub CreateHyperlinksToSelection()
     
     ' 완료 메시지
     If hyperlinkCount > 0 Then
-        MsgBox selectedText & " 단어에 " & hyperlinkCount & "개의 하이퍼링크를 생성했습니다.", vbInformation, "완료"
+        VBA.MsgBox selectedText & " 단어에 " & hyperlinkCount & "개의 하이퍼링크를 생성했습니다.", vbInformation, "완료"
 
         ' 하이퍼링크 스타일 수정 함수 호출 (한 번만 호출되도록 확인)
         On Error Resume Next
@@ -268,7 +268,7 @@ Public Sub CreateHyperlinksToSelection()
             Call ModifyHyperlinkStylesForLinkingToDefinition
         End If
     Else
-        MsgBox selectedText & " 단어의 다른 일치 항목을 찾을 수 없습니다.", vbInformation, "알림"
+        VBA.MsgBox selectedText & " 단어의 다른 일치 항목을 찾을 수 없습니다.", vbInformation, "알림"
     End If
     
     Exit Sub
@@ -282,7 +282,7 @@ ErrorHandler:
     On Error GoTo 0
     
     Application.ScreenUpdating = True
-    MsgBox "오류가 발생했습니다: " & Err.Description, vbCritical, "오류"
+    VBA.MsgBox "오류가 발생했습니다: " & Err.Description, vbCritical, "오류"
     On Error Resume Next
     If Not originalRange Is Nothing Then
         originalRange.Select
@@ -295,7 +295,7 @@ Public Sub RemoveHyperlinksFromSelection()
     
     ' 선택 영역이 비어있거나 단어가 아닌 경우 종료
     If Selection.Type = wdSelectionIP Then
-        MsgBox "단어를 선택한 후 실행해주세요.", vbExclamation, "알림"
+        VBA.MsgBox "단어를 선택한 후 실행해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
     
@@ -310,13 +310,13 @@ Public Sub RemoveHyperlinksFromSelection()
     
     ' 줄바꿈 기호가 있으면 종료
     If InStr(selectedText, vbCrLf) > 0 Or InStr(selectedText, vbLf) > 0 Or InStr(selectedText, vbCr) > 0 Then
-        MsgBox "단일 단어만 선택해주세요.", vbExclamation, "알림"
+        VBA.MsgBox "단일 단어만 선택해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
     
     ' 선택된 텍스트가 비어있으면 종료
     If selectedText = "" Then
-        MsgBox "텍스트를 선택한 후 실행해주세요.", vbExclamation, "알림"
+        VBA.MsgBox "텍스트를 선택한 후 실행해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
     
@@ -365,7 +365,7 @@ Public Sub RemoveHyperlinksFromSelection()
     originalRange.Select
     
     ' 완료 메시지
-    MsgBox selectedText & " 단어에서 " & hyperlinkCount & "개의 하이퍼링크를 제거했습니다.", vbInformation, "완료"
+    VBA.MsgBox selectedText & " 단어에서 " & hyperlinkCount & "개의 하이퍼링크를 제거했습니다.", vbInformation, "완료"
     
     Exit Sub
     
@@ -378,7 +378,7 @@ ErrorHandler:
     On Error GoTo 0
     
     Application.ScreenUpdating = True
-    MsgBox "오류가 발생했습니다: " & Err.Description, vbCritical, "오류"
+    VBA.MsgBox "오류가 발생했습니다: " & Err.Description, vbCritical, "오류"
     On Error Resume Next
     If Not originalRange Is Nothing Then
         originalRange.Select
