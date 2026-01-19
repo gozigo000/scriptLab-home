@@ -6,7 +6,7 @@ Option Explicit
 ' 
 ' - 현재/이전 커서 위치 및 관련 정보를 메모리에 유지
 ' - cursorTracker.vba는 현재/이전 커서 위치 정보만 관리하며,
-'   CustomXMLParts에 저장/로드는 cursorMoveStack.vba가 관리.
+'   cursorMoveStack.vba는 CustomXMLParts에 저장/로드를 관리.
 '
 ' 사용 예:
 ' - 이벤트에서: Call WatchCursorMove(Sel)
@@ -208,7 +208,7 @@ Public Sub ToggleCursorHistoryLogging()
     VBA.MsgBox "커서 히스토리 기록: " & IIf(gCursorHistoryEnabled, "ON", "OFF"), vbInformation, "Cursor History"
 End Sub
 
-' (이벤트용) WindowSelectionChange에서 호출
+' (MARK) WindowSelectionChange 이벤트 핸들러
 Public Sub WatchCursorMove(ByVal Sel As Selection)
     On Error GoTo SafeExit
     
