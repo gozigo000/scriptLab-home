@@ -16,6 +16,14 @@ description: scriptLab-home 프로젝트의 VBA 코딩 규칙. 모든 코드는 
 - 80자를 넘을 경우 적절한 위치에서 줄바꿈한다.
   - 공백 뒤, 연산자 뒤에서 줄바꿈
   - 문자열 연결 시 `& _` 패턴 사용
+  - 예시:
+```vba
+GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+    gSecLevel(gLastIdx), _
+    gSecTitle(gLastIdx), _
+    maxLen _
+)
+```
 
 ### 2. _utils 코드 재사용 (필수)
 - **새 기능 구현 전 반드시 확인**: `myVba\_utils` 디렉터리의
@@ -35,6 +43,10 @@ description: scriptLab-home 프로젝트의 VBA 코딩 규칙. 모든 코드는 
   우선 고려한다.
 - **Public 문서화**: Public 함수·서브에는 역할 요약,
   인자 의미, 반환값을 주석으로 남긴다.
+- **함수 호출 방식**: 함수 호출 시에는 항상 괄호를 사용하고,
+  괄호 안에 인자를 작성한다.  
+  - 예: `FooBar arg1, arg2` (지양)  
+  - 예: `result = FooBar(arg1, arg2)` (지향)
 
 ### 4. 이름 짓기
 - **가독성 우선**: 변수, 함수, 모듈 이름은 역할이 바로
@@ -69,6 +81,9 @@ description: scriptLab-home 프로젝트의 VBA 코딩 규칙. 모든 코드는 
   같은 깊이에 맞춰 정렬한다.
 - **공백 사용**: 연산자 앞뒤, 콤마 뒤에는 적절히 공백을
   넣어 가독성을 높인다.
+- **변수 선언 방식**: 변수 선언은 한 줄에 하나씩만 한다.  
+  - 예: `Dim a As Long, b As Long` (지양)  
+  - 예: `Dim a As Long` / `Dim b As Long` (지향)
 
 ## 적용 범위
 - `myVba` 디렉터리 이하의 모든 VBA 코드에 적용한다.

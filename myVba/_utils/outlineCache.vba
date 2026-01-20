@@ -1,7 +1,14 @@
 Option Explicit
 
-' (MARK) 문서 개요(탐색창 제목) 캐시 빌더
-' ----------------------
+' ============================================================
+' 모듈: outlineCache
+' 역할: 문서 개요(탐색창 제목) 캐시 빌더
+' 주요 공개 함수:
+'   - GetNearestHeadingTitle: 현재 위치의 제목 반환
+'   - GetNearestHeadingTitleLazy: Lazy 캐시 방식 제목 반환
+'   - InvalidateOutlineCache: 캐시 무효화
+' ============================================================
+'
 ' Lazy 캐시:
 ' - 문서 전체를 한 번에 스캔하지 않습니다(초반 빌드 비용 제거).
 ' - 커서가 "다른 아웃라인 영역(제목 단위)"로 이동했을 때만,
@@ -9,7 +16,8 @@ Option Explicit
 '
 ' 캐시 범위 정의(섹션):
 ' - headingStart(현재 제목 문단 시작) <= pos < nextBoundaryStart
-' - nextBoundaryStart는 "다음 제목 중, 현재 제목의 OutlineLevel보다 같거나 높은(<=) 레벨"의 시작 위치
+' - nextBoundaryStart는 "다음 제목 중, 현재 제목의
+'   OutlineLevel보다 같거나 높은(<=) 레벨"의 시작 위치
 '
 ' 즉, Heading2 아래 Heading3들은 같은 섹션으로 보고,
 ' 다음 Heading2 또는 Heading1이 나오면 섹션이 바뀐 것으로 간주합니다.
@@ -57,17 +65,24 @@ Private Const OUTLINE_XML_VERSION As String = "1"
 
 ' ===== Public API =====
 
-' 현재 커서가 속한 문단에서 위쪽으로 가장 가까운 "제목(탐색창에 표시되는 개요 수준)"을 찾아 반환
+' 현재 커서가 속한 문단에서 위쪽으로 가장 가까운
+' "제목(탐색창에 표시되는 개요 수준)"을 찾아 반환
 ' - rng: 현재 커서가 속한 문단의 Range
 ' - maxLen: 반환 문자열의 최대 길이
-' - 반환 예: "[수준 2] 서론"
+' - 반환값: "[수준 2] 서론" 형식의 문자열
 ' 하위호환용 이름: 내부적으로 lazy 캐시 사용
-Public Function GetNearestHeadingTitle(ByVal rng As Range, Optional ByVal maxLen As Long = 140) As String
+Public Function GetNearestHeadingTitle( _
+    ByVal rng As Range, _
+    Optional ByVal maxLen As Long = 140 _
+) As String
     GetNearestHeadingTitle = GetNearestHeadingTitleLazy(rng, maxLen)
 End Function
 
 ' Lazy 방식: 커서가 다른 섹션으로 이동했을 때만 제목/경계를 갱신합니다.
-Public Function GetNearestHeadingTitleLazy(ByVal rng As Range, Optional ByVal maxLen As Long = 140) As String
+Public Function GetNearestHeadingTitleLazy( _
+    ByVal rng As Range, _
+    Optional ByVal maxLen As Long = 140 _
+) As String
     On Error GoTo SafeExit
     
     Dim doc As Document
@@ -87,8 +102,13 @@ Public Function GetNearestHeadingTitleLazy(ByVal rng As Range, Optional ByVal ma
     
     ' 1) 최근 히트 섹션이면 O(1)
     If gLastIdx > 0 And gLastIdx <= gSecCount Then
-        If pos >= gSecStart(gLastIdx) And pos <= gSecEnd(gLastIdx) Then
-            GetNearestHeadingTitleLazy = FormatHeadingTitle(gSecLevel(gLastIdx), gSecTitle(gLastIdx), maxLen)
+        If pos >= gSecStart(gLastIdx) _
+            And pos <= gSecEnd(gLastIdx) Then
+            GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+                gSecLevel(gLastIdx), _
+                gSecTitle(gLastIdx), _
+                maxLen _
+            )
             TouchRamCacheEntry gDocKey, gFingerprint
             Exit Function
         End If
@@ -99,20 +119,34 @@ Public Function GetNearestHeadingTitleLazy(ByVal rng As Range, Optional ByVal ma
     idx = FindCachedSectionIndex(pos)
     If idx > 0 Then
         gLastIdx = idx
-        GetNearestHeadingTitleLazy = FormatHeadingTitle(gSecLevel(idx), gSecTitle(idx), maxLen)
+        GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+            gSecLevel(idx), _
+            gSecTitle(idx), _
+            maxLen _
+        )
         TouchRamCacheEntry gDocKey, gFingerprint
         Exit Function
     End If
     
     ' 3) 캐시 미스: 현재 위치 섹션을 계산하고 캐시에 추가
-    Dim headingStart As Long, nextBoundaryStart As Long, headingLevel As Long, headingTitle As String
-    ComputeSectionForRange doc, rng, headingStart, nextBoundaryStart, headingLevel, headingTitle
+    Dim headingStart As Long
+    Dim nextBoundaryStart As Long
+    Dim headingLevel As Long
+    Dim headingTitle As String
+    ComputeSectionForRange doc, rng, headingStart, _
+        nextBoundaryStart, headingLevel, headingTitle
     
     If headingStart > 0 Then
-        idx = AddOrUpdateSectionCache(headingStart, nextBoundaryStart, headingLevel, headingTitle)
+        idx = AddOrUpdateSectionCache( _
+            headingStart, nextBoundaryStart, _
+            headingLevel, headingTitle _
+        )
         gLastIdx = idx
-        GetNearestHeadingTitleLazy = FormatHeadingTitle(headingLevel, headingTitle, maxLen)
-        ' 캐시가 늘어났으면 문서에 저장(초기 전체 스캔이 없어서 빈도는 낮은 편)
+        GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+            headingLevel, headingTitle, maxLen _
+        )
+        ' 캐시가 늘어났으면 문서에 저장
+        ' (초기 전체 스캔이 없어서 빈도는 낮은 편)
         Call SaveCacheToDocument(doc)
         ' RAM 캐시도 최신 상태로 반영
         UpsertRamCacheFromCurrent
@@ -164,7 +198,11 @@ End Sub
 ' 현재 문서(key/fp)의 캐시가 활성화되도록 보장:
 ' - RAM에 있으면 즉시 복구
 ' - 없으면 CustomXMLParts에서 로드(유효하면) 후 RAM에 저장
-Private Sub EnsureActiveDocumentCache(ByVal doc As Document, ByVal key As String, ByVal fp As String)
+Private Sub EnsureActiveDocumentCache( _
+    ByVal doc As Document, _
+    ByVal key As String, _
+    ByVal fp As String _
+)
     On Error GoTo SafeExit
     
     ' 이미 같은 문서/상태면 접근 시간만 갱신
@@ -231,7 +269,10 @@ SafeExit:
 End Sub
 
 ' RAM 슬롯에서 현재 캐시로 복구
-Private Function LoadFromRamCache(ByVal key As String, ByVal fp As String) As Boolean
+Private Function LoadFromRamCache( _
+    ByVal key As String, _
+    ByVal fp As String _
+) As Boolean
     On Error GoTo SafeExit
     
     Dim idx As Long
@@ -273,7 +314,10 @@ Private Sub TouchRamCacheEntry(ByVal key As String, ByVal fp As String)
     If idx > 0 Then gRamDocLastAccess(idx) = Now
 End Sub
 
-Private Function FindRamCacheIndex(ByVal key As String, ByVal fp As String) As Long
+Private Function FindRamCacheIndex( _
+    ByVal key As String, _
+    ByVal fp As String _
+) As Long
     Dim i As Long
     For i = 1 To gRamDocCount
         If gRamDocKey(i) = key And gRamDocFp(i) = fp Then
@@ -437,7 +481,8 @@ Private Function FindCachedSectionIndex(ByVal pos As Long) As Long
         Exit Function
     End If
     
-    ' 섹션 시작 배열에서 pos 이하인 마지막 인덱스를 찾고, 그 구간에 포함되는지 확인
+    ' 섹션 시작 배열에서 pos 이하인 마지막 인덱스를 찾고,
+    ' 그 구간에 포함되는지 확인
     lo = 1
     hi = gSecCount
     cand = 0
@@ -462,7 +507,8 @@ Private Function FindCachedSectionIndex(ByVal pos As Long) As Long
     End If
 End Function
 
-' 섹션(headingStart~nextBoundaryStart-1)을 캐시에 삽입/업데이트하고 인덱스를 반환
+' 섹션(headingStart~nextBoundaryStart-1)을 캐시에
+' 삽입/업데이트하고 인덱스를 반환
 Private Function AddOrUpdateSectionCache( _
     ByVal headingStart As Long, _
     ByVal nextBoundaryStart As Long, _
@@ -547,8 +593,11 @@ Private Sub MergeNeighbors(ByVal idx As Long)
     ' 왼쪽과 겹치면 왼쪽을 제거하고 idx를 하나 당김(새 섹션을 유지)
     If idx > 1 Then
         If gSecEnd(idx - 1) >= gSecStart(idx) Then
-            ' 겹침: 더 넓은 end를 유지, title/level은 "최근 삽입(idx)" 것을 유지
-            If gSecEnd(idx - 1) > gSecEnd(idx) Then gSecEnd(idx) = gSecEnd(idx - 1)
+            ' 겹침: 더 넓은 end를 유지,
+            ' title/level은 "최근 삽입(idx)" 것을 유지
+            If gSecEnd(idx - 1) > gSecEnd(idx) Then
+                gSecEnd(idx) = gSecEnd(idx - 1)
+            End If
             DeleteSectionAt idx - 1
             idx = idx - 1
         End If
@@ -557,7 +606,9 @@ Private Sub MergeNeighbors(ByVal idx As Long)
     ' 오른쪽과 겹치면 오른쪽 제거
     If idx < gSecCount Then
         If gSecEnd(idx) >= gSecStart(idx + 1) Then
-            If gSecEnd(idx + 1) > gSecEnd(idx) Then gSecEnd(idx) = gSecEnd(idx + 1)
+            If gSecEnd(idx + 1) > gSecEnd(idx) Then
+                gSecEnd(idx) = gSecEnd(idx + 1)
+            End If
             DeleteSectionAt idx + 1
         End If
     End If
@@ -574,7 +625,10 @@ Private Sub DeleteSectionAt(ByVal idx As Long)
     Next i
     gSecCount = gSecCount - 1
     If gSecCount <= 0 Then
-        Erase gSecStart: Erase gSecEnd: Erase gSecLevel: Erase gSecTitle
+        Erase gSecStart
+        Erase gSecEnd
+        Erase gSecLevel
+        Erase gSecTitle
         gLastIdx = 0
     Else
         ReDim Preserve gSecStart(1 To gSecCount)
@@ -637,7 +691,11 @@ End Sub
 
 ' 문서 내 저장된 캐시를 로드(유효하면 메모리 캐시에 적재)
 ' - fingerprint가 일치할 때만 로드
-Private Function TryLoadCacheFromDocument(ByVal doc As Document, ByVal key As String, ByVal fp As String) As Boolean
+Private Function TryLoadCacheFromDocument( _
+    ByVal doc As Document, _
+    ByVal key As String, _
+    ByVal fp As String _
+) As Boolean
     On Error GoTo SafeExit
     
     Dim part As CustomXMLPart
@@ -662,8 +720,11 @@ SafeExit:
     TryLoadCacheFromDocument = False
 End Function
 
-' 기존 Outline 캐시 XML 파트들 삭제(하나만 유지하기 위함)
-Private Sub DeleteExistingOutlineParts(ByVal doc As Document)
+' 기존 Outline 캐시 XML 파트들 삭제
+' (하나만 유지하기 위함)
+Private Sub DeleteExistingOutlineParts( _
+    ByVal doc As Document _
+)
     On Error GoTo SafeExit
     Dim parts As CustomXMLParts
     Set parts = doc.CustomXMLParts.SelectByNamespace(OUTLINE_XML_NS)
@@ -678,7 +739,9 @@ SafeExit:
     On Error Resume Next
     Dim p As CustomXMLPart
     For Each p In doc.CustomXMLParts
-        If InStr(1, p.XML, OUTLINE_XML_NS, vbTextCompare) > 0 And InStr(1, p.XML, OUTLINE_XML_ROOT_LOCAL, vbTextCompare) > 0 Then
+        If InStr(1, p.XML, OUTLINE_XML_NS, vbTextCompare) > 0 And _
+            InStr(1, p.XML, OUTLINE_XML_ROOT_LOCAL, vbTextCompare) > 0 _
+        Then
             p.Delete
         End If
     Next p
@@ -700,7 +763,9 @@ Fallback:
     On Error Resume Next
     Dim p As CustomXMLPart
     For Each p In doc.CustomXMLParts
-        If InStr(1, p.XML, OUTLINE_XML_NS, vbTextCompare) > 0 And InStr(1, p.XML, OUTLINE_XML_ROOT_LOCAL, vbTextCompare) > 0 Then
+        If InStr(1, p.XML, OUTLINE_XML_NS, vbTextCompare) > 0 And _
+            InStr(1, p.XML, OUTLINE_XML_ROOT_LOCAL, vbTextCompare) > 0 _
+        Then
             Set FindOutlinePart = p
             Exit Function
         End If
@@ -709,19 +774,27 @@ Fallback:
 End Function
 
 ' XML 문자열 생성
-Private Function BuildCacheXml(ByVal docKey As String, ByVal fp As String) As String
+Private Function BuildCacheXml( _
+    ByVal docKey As String, _
+    ByVal fp As String _
+) As String
     Dim sb As String
     Dim i As Long
     
     sb = "<?xml version=""1.0"" encoding=""UTF-8""?>" & _
-         "<sl:" & OUTLINE_XML_ROOT_LOCAL & " xmlns:sl=""" & OUTLINE_XML_NS & """ version=""" & OUTLINE_XML_VERSION & """>" & _
-         "<meta docKey=""" & EscapeXmlAttr(docKey) & """ fingerprint=""" & EscapeXmlAttr(fp) & """ />" & _
+         "<sl:" & OUTLINE_XML_ROOT_LOCAL & _
+         " xmlns:sl=""" & OUTLINE_XML_NS & _
+         """ version=""" & OUTLINE_XML_VERSION & """>" & _
+         "<meta docKey=""" & EscapeXmlAttr(docKey) & _
+         """ fingerprint=""" & EscapeXmlAttr(fp) & """ />" & _
          "<sections count=""" & CStr(gSecCount) & """>"
     
     For i = 1 To gSecCount
-        sb = sb & "<sec s=""" & CStr(gSecStart(i)) & """ e=""" & CStr(gSecEnd(i)) & """ l=""" & CStr(gSecLevel(i)) & """>" & _
-                  "<t>" & EscapeXmlText(gSecTitle(i)) & "</t>" & _
-                  "</sec>"
+        sb = sb & "<sec s=""" & CStr(gSecStart(i)) & _
+            """ e=""" & CStr(gSecEnd(i)) & _
+            """ l=""" & CStr(gSecLevel(i)) & """>" & _
+            "<t>" & EscapeXmlText(gSecTitle(i)) & "</t>" & _
+            "</sec>"
     Next i
     
     sb = sb & "</sections></sl:" & OUTLINE_XML_ROOT_LOCAL & ">"
@@ -729,7 +802,11 @@ Private Function BuildCacheXml(ByVal docKey As String, ByVal fp As String) As St
 End Function
 
 ' XML 파싱: 전역 캐시 배열로 로드하고 fingerprint/개수를 반환
-Private Function ParseCacheXml(ByVal xml As String, ByRef outFingerprint As String, ByRef outCount As Long) As Boolean
+Private Function ParseCacheXml( _
+    ByVal xml As String, _
+    ByRef outFingerprint As String, _
+    ByRef outCount As Long _
+) As Boolean
     On Error GoTo SafeExit
     
     outFingerprint = ""
@@ -815,7 +892,11 @@ Private Function EscapeXmlText(ByVal s As String) As String
     EscapeXmlText = s
 End Function
 
-Private Function FormatHeadingTitle(ByVal level As Long, ByVal title As String, ByVal maxLen As Long) As String
+Private Function FormatHeadingTitle( _
+    ByVal level As Long, _
+    ByVal title As String, _
+    ByVal maxLen As Long _
+) As String
     Dim t As String
     t = title
     If maxLen > 0 And Len(t) > maxLen Then t = Left$(t, maxLen) & "…"
