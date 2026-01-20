@@ -10,7 +10,7 @@ Option Explicit
 ' - 변수가 아니면 Nothing 반환
 
 ' (MARK) 커서 Range(삽입점) 기준 변수 Range 반환
-Public Function GetVariableRangeAtInsPnt(ByVal doc As Document, ByVal cursorRng As Range) As Range
+Public Function GetVariableRangeAtRange(ByVal doc As Document, ByVal cursorRng As Range) As Range
     On Error GoTo ReturnNothing
     If doc Is Nothing Then GoTo ReturnNothing
     If cursorRng Is Nothing Then GoTo ReturnNothing
@@ -20,11 +20,11 @@ Public Function GetVariableRangeAtInsPnt(ByVal doc As Document, ByVal cursorRng 
     Dim pos As Long
     pos = cursorRng.Start
     
-    Set GetVariableRangeAtInsPnt = GetVariableRangeAtPos(doc, pos)
+    Set GetVariableRangeAtRange = GetVariableRangeAtPos(doc, pos)
     Exit Function
     
 ReturnNothing:
-    Set GetVariableRangeAtInsPnt = Nothing
+    Set GetVariableRangeAtRange = Nothing
 End Function
 
 ' (MARK) (doc, pos) 기준 변수 Range 반환
@@ -120,7 +120,7 @@ ReturnEmptyString:
     GetSelectionText = ""
 End Function
 
-' (MARK) Range의 텍스트 반환 (Nothing이면 "")
+' (MARK) Range 텍스트 반환
 Public Function GetRangeText(ByVal rng As Range) As String
     On Error GoTo SafeExit
     If rng Is Nothing Then GoTo SafeExit
@@ -148,11 +148,8 @@ SafeExit:
     GetVariableStringAtPos = ""
 End Function
 
-' ----------------------
-' Private helpers
-' ----------------------
-
-Private Function GetCharAtPos(ByVal doc As Document, ByVal pos As Long) As String
+' (MARK) pos 위치의 문자 반환
+Public Function GetCharAtPos(ByVal doc As Document, ByVal pos As Long) As String
     On Error GoTo SafeExit
     If doc Is Nothing Then GoTo SafeExit
     
@@ -169,7 +166,8 @@ SafeExit:
     GetCharAtPos = ""
 End Function
 
-Private Function IsVariableChar(ByVal ch As String) As Boolean
+' (MARK) 문자가 변수 문자인지 체크
+Public Function IsVariableChar(ByVal ch As String) As Boolean
     If Len(ch) <> 1 Then
         IsVariableChar = False
         Exit Function
