@@ -26,13 +26,13 @@ Option Explicit
 
 ' 모듈 레벨 변수
 Public isCurrWordHighlighterEnabled As Boolean ' 기능 ON/OFF 토글 (True=활성화)
-Public previousSelectedText As String
+Public previousHighlightedWord As String
 Public isProcessingSelectionChange As Boolean ' 무한루프 방지 플래그
 
 ' (MARK) 초기화
 Public Sub InitializeCurrWordHighlighter()
     isCurrWordHighlighterEnabled = True ' 초기 상태: 활성화
-    previousSelectedText = ""
+    previousHighlightedWord = ""
     isProcessingSelectionChange = False
 End Sub
 
@@ -46,9 +46,9 @@ Public Sub ToggleCurrWordHighlighter()
     Else
         ' 기능 비활성화
         ' 이전 하이라이트 제거
-        If previousSelectedText <> "" Then
-            Call RemoveHighlight(ActiveDocument, previousSelectedText)
-            previousSelectedText = ""
+        If previousHighlightedWord <> "" Then
+            Call RemoveHighlight(ActiveDocument, previousHighlightedWord)
+            previousHighlightedWord = ""
         End If
         Call showMsg("단어 하이라이트 기능이 비활성화되었습니다.", "알림", vbInformation, 1000)
     End If
@@ -73,12 +73,14 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
     Set doc = targetRange.Document
     
     Dim varRng As Range
-    ' variableRange.vba 유틸: 커서 위치 기준 변수 Range 추출
     Set varRng = GetVariableRangeAtPos(doc, targetRange.Start)
     
     Dim currentWord As String
     currentWord = GetRangeText(varRng)
-    
+
+    ' 이전 단어와 동일하면 유지
+    If currentWord = previousHighlightedWord Then GoTo Cleanup
+
     ' variableCase.vba 유틸: 케이스 판별 (camel/snake/pascal)
     If currentWord = "" Or Not ( _
         IsCamelCase(currentWord) Or _
@@ -86,23 +88,21 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
         IsSnakeCase(currentWord) Or _
         IsScreamingSnakeCase(currentWord) _
     ) Then
-        If previousSelectedText <> "" Then
-            Call RemoveHighlight(doc, previousSelectedText)
-            previousSelectedText = ""
+        If previousHighlightedWord <> "" Then
+            Call RemoveHighlight(doc, previousHighlightedWord)
+            previousHighlightedWord = ""
         End If
         GoTo Cleanup
     End If
     
-    ' 이전 단어와 동일하면 유지
-    If currentWord = previousSelectedText Then GoTo Cleanup
     
     Dim findRange As Range
     Dim scopeRange As Range
     Set scopeRange = doc.Content
     
     ' 이전 하이라이트 제거
-    If previousSelectedText <> "" Then
-        Call RemoveHighlight(doc, previousSelectedText)
+    If previousHighlightedWord <> "" Then
+        Call RemoveHighlight(doc, previousHighlightedWord)
     End If
     
     Application.ScreenUpdating = False
@@ -127,7 +127,7 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
         Loop
     End With
     
-    previousSelectedText = currentWord
+    previousHighlightedWord = currentWord
     
 Cleanup:
     On Error Resume Next
