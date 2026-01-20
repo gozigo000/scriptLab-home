@@ -118,16 +118,12 @@ End Sub
 
 ' 선택 영역이 변경될 때 호출되는 함수
 ' 이 함수는 clsAppEvents 클래스 모듈에서 appWord_WindowSelectionChange 이벤트로 호출됨
-Public Sub HighlightCurrWord()
+Public Sub HighlightCurrWord(ByVal targetRange As Range)
+    If targetRange Is Nothing Then Exit Sub
     ' 기능이 비활성화되어 있으면 종료
-    If Not isCurrWordHighlighterEnabled Then
-        Exit Sub 
-    End If
-    
+    If Not isCurrWordHighlighterEnabled Then Exit Sub
     ' 무한루프 방지: 이미 처리 중이면 종료
-    If isProcessingSelectionChange Then
-        Exit Sub
-    End If
+    If isProcessingSelectionChange Then Exit Sub
     
     ' 처리 중 플래그 설정
     isProcessingSelectionChange = True
@@ -140,13 +136,13 @@ Public Sub HighlightCurrWord()
     Dim currentWord As String
     
     ' 텍스트가 선택(드래그)된 경우에는 하이라이트하지 않음
-    If Selection.Type <> wdSelectionIP Then
+    If targetRange.Start <> targetRange.End Then
         isProcessingSelectionChange = False
         Exit Sub
     End If
     
     ' 커서만 있는 상태 -> 커서 위치 단어를 문서 전체에서 하이라이트
-    currentWord = GetWordAtCursor()
+    currentWord = GetWordAtCursor(targetRange)
         
     ' 케이스 조건(camel/snake/pascal) 불만족 또는 빈 문자열이면 이전 하이라이트만 제거
     If currentWord = "" Or Not IsTargetIdentifierCase(currentWord) Then
@@ -165,10 +161,10 @@ Public Sub HighlightCurrWord()
     End If
         
     ' 현재 커서 위치 저장 (Range 객체로 저장)
-    Set originalRange = Selection.Range.Duplicate
+    Set originalRange = targetRange.Duplicate
         
     ' 하이라이트 범위: 문서 전체
-    Set scopeRange = ActiveDocument.Content
+    Set scopeRange = targetRange.Document.Content
         
     ' 이전 하이라이트 제거
     If previousSelectedText <> "" Then
@@ -198,7 +194,6 @@ Public Sub HighlightCurrWord()
     End With
     
     Application.ScreenUpdating = True
-    Selection.SetRange originalRange.Start, originalRange.End
     
     previousSelectedText = currentWord
     isProcessingSelectionChange = False
@@ -207,11 +202,6 @@ Public Sub HighlightCurrWord()
 ErrorHandler:
     Debug.Print "선택 영역 검색 및 하이라이트 적용 중 오류: " & Err.Description
     Application.ScreenUpdating = True
-    ' 원래 커서 위치로 복원 시도
-    On Error Resume Next
-    If Not originalRange Is Nothing Then
-        Selection.SetRange originalRange.Start, originalRange.End
-    End If
 End Sub
 
 ' ======================
@@ -219,13 +209,14 @@ End Sub
 ' ======================
 
 ' 현재 커서 위치의 "단어"를 가져와 식별자 형태로 정리
-Private Function GetWordAtCursor() As String
+Private Function GetWordAtCursor(ByVal targetRange As Range) As String
     On Error GoTo SafeExit
     
     Dim rng As Range
     Dim s As String
     
-    Set rng = Selection.Range.Duplicate
+    If targetRange Is Nothing Then GoTo SafeExit
+    Set rng = targetRange.Duplicate
     rng.Expand wdWord
     s = rng.Text
     

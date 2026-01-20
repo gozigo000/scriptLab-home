@@ -1,4 +1,4 @@
-' (MARK) 괄호 매칭 및 하이라이트 섹션
+' 괄호 매칭 및 하이라이트 섹션
 ' ----------------------
 ' 커서가 괄호 옆에 있을 때 해당 괄호의 짝을 찾아 하이라이트하는 기능
 '
@@ -19,7 +19,7 @@ Public previousOperatorRanges As Collection ' 이전에 빨강 처리된 연산�
 Public previousOperatorColors As Collection ' 이전 연산자의 원래 글자색 저장
 Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
 
-' 초기화 프로시저
+' (MARK) 초기화
 Public Sub InitializeBracketMatcher()
     isBracketMatcherEnabled = False ' 초기 상태: 비활성화
     maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
@@ -31,7 +31,7 @@ Public Sub InitializeBracketMatcher()
     isProcessingBracketMatch = False
 End Sub
 
-' 기능 토글 매크로 (수동 실행용)
+' (MARK) 기능 토글 매크로
 ' - 실행할 때마다 ON/OFF가 바뀜
 Public Sub ToggleBracketMatcher()
     Call EnsureBracketMatcherInitialized
@@ -41,7 +41,7 @@ Public Sub ToggleBracketMatcher()
     If isBracketMatcherEnabled Then
         ' 켤 때 현재 커서 위치에서 괄호 매칭 및 하이라이트
         On Error Resume Next
-        Call HighlightBracket
+        Call HighlightBracket(Selection.Range)
         On Error GoTo 0
     Else
         ' 끌 때는 즉시 하이라이트 정리 + UndoRecord 종료
@@ -67,9 +67,11 @@ End Sub
 
 ' 괄호 매칭 및 하이라이트 함수
 ' 이 함수는 clsAppEvents 클래스 모듈에서 appWord_WindowSelectionChange 이벤트로 호출됨
-Public Sub HighlightBracket()
+Public Sub HighlightBracket(ByVal targetRange As Range)
+    If targetRange Is Nothing Then Exit Sub
+    
     ' 선택 영역의 길이가 0이 아니면 종료 (텍스트가 선택된 경우)
-    If Selection.Type <> wdSelectionIP Then
+    If targetRange.Start <> targetRange.End Then
         ' 선택 영역이 있으면 이전 하이라이트만 제거하고 종료
         Call RemoveBracketHighlight
         ' 하이라이트가 완전히 제거되었으므로 CustomRecord 종료
@@ -111,11 +113,11 @@ Public Sub HighlightBracket()
     Dim closeEnclosing As Range
     
     ' 현재 커서 위치 저장
-    Set originalRange = Selection.Range.Duplicate
-    cursorPos = Selection.Start
+    Set originalRange = targetRange.Duplicate
+    cursorPos = targetRange.Start
     
     ' 괄호 검색 범위 제한: 현재 문단 기준 위/아래 1개 문단까지만
-    Set searchBounds = GetBracketSearchBoundsAroundCursor(1)
+    Set searchBounds = GetBracketSearchBoundsAroundCursor(originalRange, 1)
     
     ' 이전 하이라이트 제거
     Call RemoveBracketHighlight
@@ -124,7 +126,7 @@ Public Sub HighlightBracket()
     ' 따라서 항상 "내부인지"만 판정해서, 내부일 때만 가장 안쪽 괄호쌍을 하이라이트한다.
     If TryFindEnclosingBracketPair(cursorPos, searchBounds, openEnclosing, closeEnclosing) Then
         Call HighlightBracketPair(openEnclosing, closeEnclosing)
-        GoTo RestoreCursor
+        GoTo Cleanup
     End If
     
     ' 괄호도 없고, 괄호 내부도 아니면 CustomRecord 종료
@@ -135,53 +137,14 @@ Public Sub HighlightBracket()
         isUndoRecordActive = False
     End If
     
-RestoreCursor:
-    
-    ' 원래 커서 위치로 복원
-    Selection.SetRange originalRange.Start, originalRange.End
-    
+Cleanup:
     isProcessingBracketMatch = False
     Exit Sub
     
 ErrorHandler:
     Debug.Print "괄호 매칭 중 오류: " & Err.Description
     isProcessingBracketMatch = False
-    ' 원래 커서 위치로 복원 시도
-    On Error Resume Next
-    If Not originalRange Is Nothing Then
-        Selection.SetRange originalRange.Start, originalRange.End
-    End If
 End Sub
-
-' 문자가 괄호인지 확인하는 함수
-Private Function IsBracket(char As String) As Boolean
-    IsBracket = (char = "(" Or char = ")" Or _
-                 char = "[" Or char = "]" Or _
-                 char = "{" Or char = "}")
-End Function
-
-' 여는 괄호인지 확인하는 함수
-Private Function IsOpenBracket(char As String) As Boolean
-    IsOpenBracket = (char = "(" Or char = "[" Or char = "{")
-End Function
-
-' 닫는 괄호인지 확인하는 함수
-Private Function IsCloseBracket(char As String) As Boolean
-    IsCloseBracket = (char = ")" Or char = "]" Or char = "}")
-End Function
-
-' 괄호의 종류를 반환하는 함수 ("()", "[]", "{}")
-Private Function GetBracketType(char As String) As String
-    If char = "(" Or char = ")" Then
-        GetBracketType = "()"
-    ElseIf char = "[" Or char = "]" Then
-        GetBracketType = "[]"
-    ElseIf char = "{" Or char = "}" Then
-        GetBracketType = "{}"
-    Else
-        GetBracketType = ""
-    End If
-End Function
 
 ' 괄호 쌍을 찾는 함수 (검색 범위를 bounds로 제한)
 Private Function FindMatchingBracketInBounds(bracketRange As Range, bracketChar As String, bounds As Range) As Range
@@ -264,24 +227,24 @@ Private Function FindMatchingBracketInBounds(bracketRange As Range, bracketChar 
     Set FindMatchingBracketInBounds = Nothing
 End Function
 
-' 현재 커서 문단 기준 위/아래 maxParagraphs개 문단까지의 Range를 반환
-Private Function GetBracketSearchBoundsAroundCursor(ByVal maxParagraphs As Long) As Range
+' baseRange 문단 기준 위/아래 maxParagraphs개 문단까지의 Range를 반환
+Private Function GetBracketSearchBoundsAroundCursor(ByVal baseRange As Range, ByVal maxParagraphs As Long) As Range
     Dim basePara As Paragraph
     Dim startPara As Paragraph
     Dim endPara As Paragraph
     Dim i As Long
     
-    If Selection Is Nothing Or Selection.Range Is Nothing Then
+    If baseRange Is Nothing Then
         Set GetBracketSearchBoundsAroundCursor = ActiveDocument.Content
         Exit Function
     End If
     
-    If Selection.Range.Paragraphs.Count = 0 Then
+    If baseRange.Paragraphs.Count = 0 Then
         Set GetBracketSearchBoundsAroundCursor = ActiveDocument.Content
         Exit Function
     End If
     
-    Set basePara = Selection.Range.Paragraphs(1)
+    Set basePara = baseRange.Paragraphs(1)
     Set startPara = basePara
     Set endPara = basePara
     
@@ -295,7 +258,7 @@ Private Function GetBracketSearchBoundsAroundCursor(ByVal maxParagraphs As Long)
         Set endPara = endPara.Next
     Next i
     
-    Set GetBracketSearchBoundsAroundCursor = ActiveDocument.Range(startPara.Range.Start, endPara.Range.End)
+    Set GetBracketSearchBoundsAroundCursor = baseRange.Document.Range(startPara.Range.Start, endPara.Range.End)
 End Function
 
 ' 커서가 어떤 괄호쌍 내부에 있을 때, 가장 가까운 상위(=가장 안쪽) 괄호쌍을 찾는다.
@@ -424,17 +387,6 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     If openRange.End <= closeRange.Start Then
         Set innerRange = ActiveDocument.Range(openRange.End, closeRange.Start)
         innerText = innerRange.Text
-        If IsDigitOnly(innerText) Then
-            ' 이전 하이라이트는 이미 HighlightBracket에서 제거됨.
-            ' 현재는 하이라이트를 하지 않으므로 CustomRecord가 열려있으면 종료.
-            If isUndoRecordActive Then
-                On Error Resume Next
-                Application.UndoRecord.EndCustomRecord
-                On Error GoTo ErrorHandler
-                isUndoRecordActive = False
-            End If
-            Exit Sub
-        End If
     End If
     
     ' 눈에 잘 띄는 색상 팔레트 정의
@@ -581,15 +533,6 @@ ErrorHandler:
     Debug.Print "연산자 빨강 표시 중 오류: " & Err.Description
 End Sub
 
-' 공백 문자 판정 (|| 사이 공백 허용용)
-Private Function IsWhitespaceChar(ByVal ch As String) As Boolean
-    If ch = " " Or ch = vbTab Or ch = ChrW$(160) Then
-        IsWhitespaceChar = True
-    Else
-        IsWhitespaceChar = False
-    End If
-End Function
-
 ' 글자색을 빨강으로 바꾸고, 원래 색을 복원할 수 있도록 저장
 Private Sub ApplyRedFontAndRemember(targetRange As Range)
     On Error GoTo ErrorHandler
@@ -716,7 +659,7 @@ ErrorHandler:
     Debug.Print "중첩 괄호 하이라이트 중 오류: " & Err.Description
 End Sub
 
-' 이전 하이라이트 제거 함수
+' (MARK) 이전 하이라이트 제거
 ' 항상 CustomRecord를 유지 (종료하지 않음)
 Public Sub RemoveBracketHighlight()
     On Error GoTo ErrorHandler
@@ -781,29 +724,3 @@ ErrorHandler:
     Set previousOperatorRanges = New Collection
     Set previousOperatorColors = New Collection
 End Sub
-
-' 괄호 내부 문자열이 "숫자"로만 구성되어 있는지 확인 (공백/개행은 무시)
-Private Function IsDigitOnly(ByVal s As String) As Boolean
-    Dim t As String
-    Dim re As Object
-    
-    ' 공백류 제거 (스페이스/탭/개행)
-    t = s
-    t = Replace(t, " ", "")
-    t = Replace(t, vbTab, "")
-    t = Replace(t, vbCr, "")
-    t = Replace(t, vbLf, "")
-    
-    If Len(t) = 0 Then
-        IsDigitOnly = False
-        Exit Function
-    End If
-    
-    ' VBScript 정규식 (late binding)
-    Set re = CreateObject("VBScript.RegExp")
-    re.Global = False
-    re.IgnoreCase = True
-    re.Pattern = "^[0-9]+$"
-    
-    IsDigitOnly = re.Test(t)
-End Function

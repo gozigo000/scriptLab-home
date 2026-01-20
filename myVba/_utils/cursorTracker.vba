@@ -9,7 +9,7 @@ Option Explicit
 '   cursorMoveStack.vba는 CustomXMLParts에 저장/로드를 관리.
 '
 ' 사용 예:
-' - 이벤트에서: Call WatchCursorMove(Sel)
+' - 이벤트에서: Call WatchCursorMove(Sel.Range)
 ' - 필요할 때: Call CursorMemory_TryGetCurrent(doc, outInfo)
 ' - 필요할 때: Call CursorMemory_TryGetPrevious(doc, outInfo)
 
@@ -129,7 +129,7 @@ End Function
 ' - 커서 이동(SelectionChange)마다 "현재/이전" 커서 정보는 메모리에만 유지합니다.
 ' - (커서 히스토리(CustomXMLParts) 저장/로드는 cursorMoveStack.vba 에서 관리)
 ' - 이벤트 훅: clsAppEvents.cls 의 appWord_WindowSelectionChange 에서
-'   WatchCursorMove Sel 을 호출하도록 연결하면 동작합니다.
+'   WatchCursorMove Sel.Range 을 호출하도록 연결하면 동작합니다.
 
 Public Sub a_ShowCursorLocationInfo()
     On Error GoTo ErrorHandler
@@ -209,19 +209,19 @@ Public Sub ToggleCursorHistoryLogging()
 End Sub
 
 ' (MARK) WindowSelectionChange 이벤트 핸들러
-Public Sub WatchCursorMove(ByVal Sel As Selection)
+Public Sub WatchCursorMove(ByVal targetRange As Range)
     On Error GoTo SafeExit
     
     If Not gCursorHistoryEnabled Then Exit Sub
     
-    If Sel Is Nothing Then Exit Sub
-    If Sel.Type <> wdSelectionIP Then Exit Sub ' 커서(IP)일 때만 기록
+    If targetRange Is Nothing Then Exit Sub
+    If targetRange.Start <> targetRange.End Then Exit Sub
     
     Dim doc As Document
-    Set doc = Sel.Range.Document
+    Set doc = targetRange.Document
     
     Dim rng As Range
-    Set rng = Sel.Range.Duplicate
+    Set rng = targetRange.Duplicate
     
     ' 너무 잦은 이벤트/중복 기록 방지 (문서+pos 기준)
     Static sLastDocId As String
@@ -249,7 +249,7 @@ Private Function BuildCursorMoveInfo(ByVal doc As Document, ByVal rng As Range) 
     Set info = New CursorMoveInfo
     
     info.Position = rng.Start
-    info.PageNo = Selection.Information(wdActiveEndPageNumber)
+    info.PageNo = rng.Information(wdActiveEndPageNumber)
     info.WordText = GetWordAtCursor(rng)
     info.BookmarkNames = GetBookmarkNamesAtRange(doc, rng, 15)
     info.SubAddress = GetFirstHyperlinkSubAddressAtRange(rng)
