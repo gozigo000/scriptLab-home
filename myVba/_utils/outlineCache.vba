@@ -6,7 +6,10 @@ Option Explicit
 ' Public 함수/서브:
 '   - GetCurrentHeadingTitle: 현재 위치의 제목 문자열 반환
 '   - GetCurrentHeadingLevel: 현재 위치의 제목 레벨 반환
+'   - GetCurrentHeadingRange: 현재 위치의 제목 구간(Range) 반환
 '   - InvalidateOutlineCache: 캐시 무효화
+'   - a_InvalidateCurrentDocumentOutlineCache: (디버깅용) 현재 문서 캐시 무효화
+'   - a_ShowOutlineHeadingInfo: (디버깅용) 현재 위치의 제목 정보 알림
 ' ============================================================
 '
 ' Lazy 캐시:
@@ -15,12 +18,10 @@ Option Explicit
 '   현재 커서가 속한 영역의 제목/경계를 계산해서 캐시합니다.
 '
 ' 캐시 범위 정의(섹션):
-' - headingStart(현재 제목 문단 시작) <= pos < nextBoundaryStart
-' - nextBoundaryStart는 "다음 제목 중, 현재 제목의
-'   OutlineLevel보다 같거나 높은(<=) 레벨"의 시작 위치
-'
-' 즉, Heading2 아래 Heading3들은 같은 섹션으로 보고,
-' 다음 Heading2 또는 Heading1이 나오면 섹션이 바뀐 것으로 간주합니다.
+' - headingStart <= pos < nextHeadingStart
+' - headingStart: "현재 위치에서 위로 가장 가까운 제목" 문단의 Start 위치
+' - nextHeadingStart: "현재 위치에서 아래로 가장 가까운 다음 제목" 문단의 Start 위치
+' (즉, 레벨과 무관하게 다음 제목(Heading1/2/3...)이 나오면 섹션이 바뀐 것으로 간주)
 '
 ' 제목 판정 기준:
 ' - Paragraph.OutlineLevel <> wdOutlineLevelBodyText
@@ -52,7 +53,7 @@ Private gRamLastIdx() As Long
 Private Const MAX_SECTION_CACHE As Long = 256
 Private gSecCount As Long
 Private gSecStart() As Long        ' 섹션 시작(제목 문단 Start) - 오름차순 유지
-Private gSecEnd() As Long          ' 섹션 끝(포함) = nextBoundaryStart-1
+Private gSecEnd() As Long          ' 섹션 끝(포함) = nextHeadingStart-1
 Private gSecLevel() As Long
 Private gSecTitle() As String
 Private gLastIdx As Long           ' 직전 히트 인덱스(로컬리티 최적화)
@@ -85,6 +86,73 @@ Public Function GetCurrentHeadingLevel( _
 ) As Long
     GetCurrentHeadingLevel = GetCurrentHeadingLevelLazy(rng)
 End Function
+
+' 현재 위치 기준:
+' - 위로 가장 가까운 제목(헤딩) 문단 시작 ~
+' - 아래로 가장 가까운 다음 제목(헤딩) 문단 시작 직전(End는 다음 제목 Start로 설정)
+' 을 Range로 반환합니다.
+' - 제목을 찾지 못하면 Nothing 반환
+Public Function GetCurrentHeadingRange( _
+    ByVal rng As Range _
+) As Range
+    Set GetCurrentHeadingRange = GetCurrentHeadingRangeLazy(rng)
+End Function
+
+' (MARK) (디버깅용) 현재 위치의 "제목(개요)" 정보 알림
+' ----------------------
+' 현재 커서(Selection) 기준으로 다음 정보를 알림창으로 표시합니다.
+' - 제목 문자열(탐색창에 표시되는 개요 제목)
+' - 제목 레벨(OutlineLevel)
+' - 제목 구간(시작/끝 Range)
+'
+' 사용:
+' - 매크로: a_ShowOutlineHeadingInfo 실행
+Public Sub a_ShowOutlineHeadingInfo()
+    On Error GoTo ErrorHandler
+    
+    Dim selRng As Range
+    Set selRng = Selection.Range
+    If selRng Is Nothing Then
+        VBA.MsgBox "Selection.Range를 가져올 수 없습니다.", vbInformation, "현재 제목 정보"
+        Exit Sub
+    End If
+    
+    Dim headingTitle As String
+    headingTitle = GetCurrentHeadingTitle(selRng, 200)
+    
+    Dim headingLevel As Long
+    headingLevel = GetCurrentHeadingLevel(selRng)
+    
+    Dim headingRng As Range
+    Set headingRng = GetCurrentHeadingRange(selRng)
+    
+    Dim rangeStart As Long
+    Dim rangeEnd As Long
+    Dim rangeLen As Long
+    
+    If headingRng Is Nothing Then
+        rangeStart = 0
+        rangeEnd = 0
+        rangeLen = 0
+    Else
+        rangeStart = headingRng.Start
+        rangeEnd = headingRng.End
+        rangeLen = rangeEnd - rangeStart
+    End If
+    
+    Dim msg As String
+    msg = ""
+    msg = msg & "제목: " & IIf(headingTitle = "", "(없음)", headingTitle) & vbCrLf
+    msg = msg & "레벨: " & CStr(headingLevel) & vbCrLf
+    msg = msg & "구간: [" & CStr(rangeStart) & ", " & CStr(rangeEnd) & ")" & _
+        " (len=" & CStr(rangeLen) & ")" & vbCrLf
+    
+    VBA.MsgBox msg, vbInformation, "현재 제목 정보"
+    Exit Sub
+    
+ErrorHandler:
+    VBA.MsgBox "오류: " & Err.Description, vbCritical, "현재 제목 정보"
+End Sub
 
 ' Lazy 방식: rng 위치에서 요청한 경우에만 제목/경계를 갱신합니다.
 Private Function GetCurrentHeadingTitleLazy( _
@@ -136,15 +204,15 @@ Private Function GetCurrentHeadingTitleLazy( _
     
     ' 3) 캐시 미스: 현재 위치 섹션을 계산하고 캐시에 추가
     Dim headingStart As Long
-    Dim nextBoundaryStart As Long
+    Dim nextHeadingStart As Long
     Dim headingLevel As Long
     Dim headingTitle As String
     ComputeSectionForRange doc, rng, headingStart, _
-        nextBoundaryStart, headingLevel, headingTitle
+        nextHeadingStart, headingLevel, headingTitle
     
     If headingStart > 0 Then
         idx = AddOrUpdateSectionCache( _
-            headingStart, nextBoundaryStart, _
+            headingStart, nextHeadingStart, _
             headingLevel, headingTitle _
         )
         gLastIdx = idx
@@ -208,15 +276,15 @@ Private Function GetCurrentHeadingLevelLazy( _
     
     ' 3) 캐시 미스: 현재 위치 섹션을 계산하고 캐시에 추가
     Dim headingStart As Long
-    Dim nextBoundaryStart As Long
+    Dim nextHeadingStart As Long
     Dim headingLevel As Long
     Dim headingTitle As String
     ComputeSectionForRange doc, rng, headingStart, _
-        nextBoundaryStart, headingLevel, headingTitle
+        nextHeadingStart, headingLevel, headingTitle
     
     If headingStart > 0 Then
         idx = AddOrUpdateSectionCache( _
-            headingStart, nextBoundaryStart, _
+            headingStart, nextHeadingStart, _
             headingLevel, headingTitle _
         )
         gLastIdx = idx
@@ -236,11 +304,142 @@ SafeExit:
     GetCurrentHeadingLevelLazy = 0
 End Function
 
+' Lazy 방식: rng 위치에서 요청한 경우에만 제목/경계를 갱신합니다.
+Private Function GetCurrentHeadingRangeLazy( _
+    ByVal rng As Range _
+) As Range
+    On Error GoTo SafeExit
+    
+    Dim doc As Document
+    Set doc = rng.Document
+    
+    Dim key As String
+    key = MakeDocKey(doc)
+    
+    Dim fp As String
+    fp = MakeFingerprint(doc)
+    
+    Dim pos As Long
+    pos = rng.Start
+    
+    ' 문서 전환 시: 최근 N개 RAM 캐시에서 우선 복구(없으면 CustomXMLParts에서 로드)
+    EnsureActiveDocumentCache doc, key, fp
+    
+    Dim headingStart As Long
+    headingStart = 0
+    
+    ' 1) 최근 히트 섹션이면 O(1) (섹션 시작=현재 헤딩 시작)
+    If gLastIdx > 0 And gLastIdx <= gSecCount Then
+        If pos >= gSecStart(gLastIdx) _
+            And pos <= gSecEnd(gLastIdx) Then
+            headingStart = gSecStart(gLastIdx)
+        End If
+    End If
+    
+    ' 2) 캐시된 섹션 구간에서 이진탐색
+    If headingStart = 0 Then
+        Dim idx As Long
+        idx = FindCachedSectionIndex(pos)
+        If idx > 0 Then
+            gLastIdx = idx
+            headingStart = gSecStart(idx)
+        End If
+    End If
+    
+    ' 3) 캐시 미스: 섹션을 계산하고 캐시에 추가(이후 호출 최적화)
+    If headingStart = 0 Then
+        Dim nextHeadingStart As Long
+        Dim headingLevel As Long
+        Dim headingTitle As String
+        ComputeSectionForRange doc, rng, headingStart, _
+            nextHeadingStart, headingLevel, headingTitle
+        
+        If headingStart > 0 Then
+            Dim i2 As Long
+            i2 = AddOrUpdateSectionCache( _
+                headingStart, nextHeadingStart, _
+                headingLevel, headingTitle _
+            )
+            gLastIdx = i2
+            Call SaveCacheToDocument(doc)
+            UpsertRamCacheFromCurrent
+        End If
+    End If
+    
+    If headingStart = 0 Then GoTo SafeExit
+    
+    ' 4) 아래로 가장 가까운 "다음 제목" 찾기 (레벨 무관, 가장 먼저 만나는 제목)
+    Dim nextHeadingStartComputed As Long
+    nextHeadingStartComputed = 0
+    
+    Dim q As Paragraph
+    Set q = rng.Paragraphs(1).Next
+    Do While Not q Is Nothing
+        Dim lvl As WdOutlineLevel
+        lvl = q.OutlineLevel
+        If lvl <> wdOutlineLevelBodyText Then
+            nextHeadingStartComputed = q.Range.Start
+            Exit Do
+        End If
+        On Error Resume Next
+        Set q = q.Next
+        On Error GoTo SafeExit
+    Loop
+    
+    If nextHeadingStartComputed = 0 Then nextHeadingStartComputed = doc.Content.End
+    If nextHeadingStartComputed < headingStart Then nextHeadingStartComputed = headingStart
+    
+    Set GetCurrentHeadingRangeLazy = doc.Range(headingStart, nextHeadingStartComputed)
+    TouchRamCacheEntry gDocKey, gFingerprint
+    Exit Function
+    
+SafeExit:
+    Set GetCurrentHeadingRangeLazy = Nothing
+End Function
+
+' (MARK) (디버깅용) 현재 문서 캐시 무효화
+Public Sub a_InvalidateCurrentDocumentOutlineCache()
+    Call InvalidateOutlineCache(ActiveDocument)
+End Sub
+
 ' 캐시를 강제로 무효화합니다. (다음 호출 시 재빌드됨)
 Public Sub InvalidateOutlineCache(Optional ByVal doc As Document)
+    On Error GoTo SafeExit
+    
+    ' 기본은 현재(활성) 문서
+    Dim target As Document
+    If doc Is Nothing Then
+        Set target = ActiveDocument
+    Else
+        Set target = doc
+    End If
+    
+    Dim key As String
+    key = MakeDocKey(target)
+    
+    Dim fp As String
+    fp = MakeFingerprint(target)
+    
+    ' 1) 문서 내 저장된 캐시(CustomXMLParts) 삭제
+    DeleteExistingOutlineParts target
+    
+    ' 2) RAM(LRU) 캐시에서 해당 문서만 제거
+    RemoveRamCacheEntry key, fp
+    
+    ' 3) 현재 활성 캐시가 같은 문서면 즉시 무효화
+    If gDocKey = key And gFingerprint = fp Then
+        ResetSectionCache "", ""
+        gLastIdx = 0
+    End If
+    
+    Exit Sub
+    
+SafeExit:
+    ' 실패하더라도 최소한 메모리 캐시만 초기화(문서 보호/권한/환경 차이 등)
     ResetSectionCache "", ""
     ResetRamCache
 End Sub
+
 
 ' ===== 내부 구현 =====
 
@@ -270,6 +469,30 @@ Private Sub ResetRamCache()
     Erase gRamSecLevel
     Erase gRamSecTitle
     Erase gRamLastIdx
+End Sub
+
+' RAM 캐시에서 특정 문서(key/fp)만 제거(슬롯은 비워두고 LRU로 재사용되도록 함)
+Private Sub RemoveRamCacheEntry(ByVal key As String, ByVal fp As String)
+    On Error GoTo SafeExit
+    If gRamDocCount <= 0 Then Exit Sub
+    If Not IsArrayAllocated(gRamDocKey) Then Exit Sub
+    
+    Dim idx As Long
+    idx = FindRamCacheIndex(key, fp)
+    If idx <= 0 Then Exit Sub
+    
+    gRamDocKey(idx) = ""
+    gRamDocFp(idx) = ""
+    gRamDocLastAccess(idx) = #1/1/1900#
+    gRamSecCount(idx) = 0
+    gRamSecStart(idx) = Empty
+    gRamSecEnd(idx) = Empty
+    gRamSecLevel(idx) = Empty
+    gRamSecTitle(idx) = Empty
+    gRamLastIdx(idx) = 0
+    
+    Exit Sub
+SafeExit:
 End Sub
 
 ' 현재 문서(key/fp)의 캐시가 활성화되도록 보장:
@@ -493,14 +716,14 @@ Private Sub ComputeSectionForRange( _
     ByVal doc As Document, _
     ByVal rng As Range, _
     ByRef headingStart As Long, _
-    ByRef nextBoundaryStart As Long, _
+    ByRef nextHeadingStart As Long, _
     ByRef headingLevel As Long, _
     ByRef headingTitle As String _
 )
     On Error GoTo SafeExit
     
     headingStart = 0
-    nextBoundaryStart = doc.Content.End + 1
+    nextHeadingStart = doc.Content.End + 1
     headingLevel = 0
     headingTitle = ""
     
@@ -534,17 +757,15 @@ Private Sub ComputeSectionForRange( _
     
     If headingStart = 0 Then Exit Sub
     
-    ' 2) 아래로 내려가며 섹션 경계(다음 동일/상위 레벨 제목) 찾기
+    ' 2) 아래로 내려가며 섹션 경계(다음 제목: 레벨 무관) 찾기
     Dim q As Paragraph
     Set q = doc.Range(headingStart, headingStart).Paragraphs(1).Next
     
     Do While Not q Is Nothing
         lvl = q.OutlineLevel
         If lvl <> wdOutlineLevelBodyText Then
-            If CLng(lvl) <= headingLevel Then
-                nextBoundaryStart = q.Range.Start
-                Exit Do
-            End If
+            nextHeadingStart = q.Range.Start
+            Exit Do
         End If
         On Error Resume Next
         Set q = q.Next
@@ -555,7 +776,7 @@ Private Sub ComputeSectionForRange( _
     
 SafeExit:
     headingStart = 0
-    nextBoundaryStart = 0
+    nextHeadingStart = 0
     headingLevel = 0
     headingTitle = ""
 End Sub
@@ -594,17 +815,17 @@ Private Function FindCachedSectionIndex(ByVal pos As Long) As Long
     End If
 End Function
 
-' 섹션(headingStart~nextBoundaryStart-1)을 캐시에
+' 섹션(headingStart~nextHeadingStart-1)을 캐시에
 ' 삽입/업데이트하고 인덱스를 반환
 Private Function AddOrUpdateSectionCache( _
     ByVal headingStart As Long, _
-    ByVal nextBoundaryStart As Long, _
+    ByVal nextHeadingStart As Long, _
     ByVal headingLevel As Long, _
     ByVal headingTitle As String _
 ) As Long
     Dim secStart As Long, secEnd As Long
     secStart = headingStart
-    secEnd = nextBoundaryStart - 1
+    secEnd = nextHeadingStart - 1
     If secEnd < secStart Then secEnd = secStart
     
     ' 이미 같은 start가 있으면 갱신
