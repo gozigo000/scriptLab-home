@@ -1,4 +1,5 @@
-*.docx
+# *.docx
+~*.docx
 *.TMP
 
 # TypeScript 빌드 출력

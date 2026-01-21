@@ -22,7 +22,7 @@ Public Function IsCamelCase(ByVal str As String) As Boolean
 End Function
 
 Public Function IsPascalCase(ByVal str As String) As Boolean
-    IsPascalCase = TestRegex(str, "^[A-Z][a-z0-9]*([A-Z][a-z0-9]*)+$")
+    IsPascalCase = TestRegex(str, "^[A-Z][a-z0-9]+([A-Z][a-z0-9]*)+$")
 End Function
 
 Public Function IsSnakeCase(ByVal str As String) As Boolean

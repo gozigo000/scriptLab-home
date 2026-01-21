@@ -31,7 +31,7 @@ Public isProcessingSelectionChange As Boolean ' 무한루프 방지 플래그
 
 ' (MARK) 초기화
 Public Sub InitializeCurrWordHighlighter()
-    isCurrWordHighlighterEnabled = True ' 초기 상태: 활성화
+    isCurrWordHighlighterEnabled = False ' 초기 상태: 비활성화
     previousHighlightedWord = ""
     isProcessingSelectionChange = False
 End Sub
