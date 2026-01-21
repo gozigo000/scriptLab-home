@@ -3,9 +3,8 @@ Option Explicit
 ' ============================================================
 ' 모듈: outlineCache
 ' 역할: 문서 개요(탐색창 제목) 캐시 빌더
-' 주요 공개 함수:
-'   - GetNearestHeadingTitle: 현재 위치의 제목 반환
-'   - GetNearestHeadingTitleLazy: Lazy 캐시 방식 제목 반환
+' Public 함수/서브:
+'   - GetCurrentHeadingTitle: 현재 위치의 제목 반환
 '   - InvalidateOutlineCache: 캐시 무효화
 ' ============================================================
 '
@@ -26,8 +25,7 @@ Option Explicit
 ' - Paragraph.OutlineLevel <> wdOutlineLevelBodyText
 '
 ' 사용 예:
-' - title = GetNearestHeadingTitle(Selection.Range, 140)
-' - title = GetNearestHeadingTitleLazy(Selection.Range, 140)
+' - title = GetCurrentHeadingTitle(Selection.Range, 140)
 ' - Call InvalidateOutlineCache() ' 필요 시 강제 갱신/초기화
 
 ' ===== Lazy 캐시 저장소(모듈 레벨) =====
@@ -71,15 +69,15 @@ Private Const OUTLINE_XML_VERSION As String = "1"
 ' - maxLen: 반환 문자열의 최대 길이
 ' - 반환값: "[수준 2] 서론" 형식의 문자열
 ' 하위호환용 이름: 내부적으로 lazy 캐시 사용
-Public Function GetNearestHeadingTitle( _
+Public Function GetCurrentHeadingTitle( _
     ByVal rng As Range, _
     Optional ByVal maxLen As Long = 140 _
 ) As String
-    GetNearestHeadingTitle = GetNearestHeadingTitleLazy(rng, maxLen)
+    GetCurrentHeadingTitle = GetCurrentHeadingTitleLazy(rng, maxLen)
 End Function
 
-' Lazy 방식: 커서가 다른 섹션으로 이동했을 때만 제목/경계를 갱신합니다.
-Public Function GetNearestHeadingTitleLazy( _
+' Lazy 방식: rng 위치에서 요청한 경우에만 제목/경계를 갱신합니다.
+Private Function GetCurrentHeadingTitleLazy( _
     ByVal rng As Range, _
     Optional ByVal maxLen As Long = 140 _
 ) As String
@@ -104,7 +102,7 @@ Public Function GetNearestHeadingTitleLazy( _
     If gLastIdx > 0 And gLastIdx <= gSecCount Then
         If pos >= gSecStart(gLastIdx) _
             And pos <= gSecEnd(gLastIdx) Then
-            GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+            GetCurrentHeadingTitleLazy = FormatHeadingTitle( _
                 gSecLevel(gLastIdx), _
                 gSecTitle(gLastIdx), _
                 maxLen _
@@ -119,7 +117,7 @@ Public Function GetNearestHeadingTitleLazy( _
     idx = FindCachedSectionIndex(pos)
     If idx > 0 Then
         gLastIdx = idx
-        GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+        GetCurrentHeadingTitleLazy = FormatHeadingTitle( _
             gSecLevel(idx), _
             gSecTitle(idx), _
             maxLen _
@@ -142,7 +140,7 @@ Public Function GetNearestHeadingTitleLazy( _
             headingLevel, headingTitle _
         )
         gLastIdx = idx
-        GetNearestHeadingTitleLazy = FormatHeadingTitle( _
+        GetCurrentHeadingTitleLazy = FormatHeadingTitle( _
             headingLevel, headingTitle, maxLen _
         )
         ' 캐시가 늘어났으면 문서에 저장
@@ -151,12 +149,12 @@ Public Function GetNearestHeadingTitleLazy( _
         ' RAM 캐시도 최신 상태로 반영
         UpsertRamCacheFromCurrent
     Else
-        GetNearestHeadingTitleLazy = ""
+        GetCurrentHeadingTitleLazy = ""
     End If
     Exit Function
     
 SafeExit:
-    GetNearestHeadingTitleLazy = ""
+    GetCurrentHeadingTitleLazy = ""
 End Function
 
 ' 캐시를 강제로 무효화합니다. (다음 호출 시 재빌드됨)

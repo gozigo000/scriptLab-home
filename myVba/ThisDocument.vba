@@ -19,10 +19,10 @@ Private Sub Document_Open()
     ' bracketMatcher 토글 단축키 등록 (Alt+B)
     Call RegisterHotkey("ToggleBracketMatcher", BuildKeyCode(wdKeyAlt, wdKeyB))
     
-    ' cursorHistory 초기화
-    Call InitializeCursorHistory
-    ' cursorHistory 토글 단축키 등록 (Alt+R)
-    Call RegisterHotkey("ToggleCursorHistoryLogging", BuildKeyCode(wdKeyAlt, wdKeyR))
+    ' cursorMoveTracker 초기화
+    Call InitializeCursorMoveTracking
+    ' cursorMoveTracker 토글 단축키 등록 (Alt+R)
+    Call RegisterHotkey("ToggleCursorMoveTracking", BuildKeyCode(wdKeyAlt, wdKeyR))
     
     ' 클래스 인스턴스 생성 및 Application 객체 연결
     ' 이 클래스는 WindowSelectionChange 이벤트를 처리합니다.

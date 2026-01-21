@@ -19,7 +19,7 @@ Private Sub appWord_WindowSelectionChange(ByVal Sel As Selection)
     Call HighlightCurrWord(Sel.Range)
     
     ' cursorTracker 모듈의 함수 호출 (문서별 커서 이동 히스토리 저장)
-    Call WatchCursorMove(Sel.Range)
+    Call TrackCursorMove(Sel.Range)
 
 End Sub
 

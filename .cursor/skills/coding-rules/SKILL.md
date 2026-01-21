@@ -71,7 +71,7 @@ GetNearestHeadingTitleLazy = FormatHeadingTitle( _
   성능 이슈 등은 주석으로 남긴다.
 - **모듈 헤더**: 중요 모듈 상단에는 다음 내용을 간단히 적는다.  
   - 모듈 역할  
-  - 주요 공개 함수 목록  
+  - Public 함수/서브 목록  
   - 관련된 `_utils` 모듈이 있는 경우 그 위치
 
 ### 7. 스타일 및 정렬
