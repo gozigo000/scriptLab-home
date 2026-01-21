@@ -7,9 +7,9 @@ Option Explicit
 '   - GetCurrentHeadingTitle: 현재 위치의 제목 문자열 반환
 '   - GetCurrentHeadingLevel: 현재 위치의 제목 레벨 반환
 '   - GetCurrentHeadingRange: 현재 위치의 제목 구간(Range) 반환
-'   - InvalidateOutlineCache: 캐시 무효화
-'   - a_InvalidateCurrentDocumentOutlineCache: (디버깅용) 현재 문서 캐시 무효화
-'   - a_ShowOutlineHeadingInfo: (디버깅용) 현재 위치의 제목 정보 알림
+'   - DeleteOutlineCache: 캐시 무효화
+'   - (디버깅용) a_ShowOutlineHeadingInfo: 현재 위치의 제목 정보 알림
+'   - (디버깅용) a_DeleteCurrentDocumentOutlineCache: 현재 문서 캐시 무효화
 ' ============================================================
 '
 ' Lazy 캐시:
@@ -28,7 +28,7 @@ Option Explicit
 '
 ' 사용 예:
 ' - title = GetCurrentHeadingTitle(Selection.Range, 140)
-' - Call InvalidateOutlineCache() ' 필요 시 강제 갱신/초기화
+' - Call DeleteOutlineCache() ' 필요 시 강제 갱신/초기화
 
 ' ===== Lazy 캐시 저장소(모듈 레벨) =====
 Private gDocKey As String
@@ -398,12 +398,12 @@ SafeExit:
 End Function
 
 ' (MARK) (디버깅용) 현재 문서 캐시 무효화
-Public Sub a_InvalidateCurrentDocumentOutlineCache()
-    Call InvalidateOutlineCache(ActiveDocument)
+Public Sub a_DeleteCurrentDocumentOutlineCache()
+    Call DeleteOutlineCache(ActiveDocument)
 End Sub
 
 ' 캐시를 강제로 무효화합니다. (다음 호출 시 재빌드됨)
-Public Sub InvalidateOutlineCache(Optional ByVal doc As Document)
+Public Sub DeleteOutlineCache(Optional ByVal doc As Document)
     On Error GoTo SafeExit
     
     ' 기본은 현재(활성) 문서

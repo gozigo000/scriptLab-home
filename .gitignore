@@ -1,4 +1,5 @@
-# *.docx
+wordFiles/
+*.docx
 ~*.docx
 *.TMP
 
