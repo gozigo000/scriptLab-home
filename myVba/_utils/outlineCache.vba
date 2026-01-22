@@ -722,7 +722,18 @@ Private Sub ComputeSectionForRange( _
     Dim p As Paragraph
     Dim lvl As WdOutlineLevel
     
-    Set p = rng.Paragraphs(1)
+    Dim startP As Paragraph
+    Set startP = rng.Paragraphs(1)
+    
+    ' 표 안에서 호출된 경우: 표 내부 문단을 순회하지 말고 표 밖 문단으로 이동
+    If Not startP Is Nothing And IsRangeInTable(startP.Range) Then
+        ' 정책: 표 이전 문단이 없으면 "제목 없음"으로 판단
+        Set p = GetParagraphOutsideTable(doc, startP, -1)
+    Else
+        Set p = startP
+    End If
+    If p Is Nothing Then Exit Sub
+    
     Do While Not p Is Nothing
         lvl = p.OutlineLevel
         If lvl <> wdOutlineLevelBodyText Then
@@ -741,16 +752,17 @@ Private Sub ComputeSectionForRange( _
             End If
             Exit Do
         End If
-        On Error Resume Next
-        Set p = p.Previous
-        On Error GoTo SafeExit
+        Set p = GetPreviousParagraphSkippingTables(doc, p)
     Loop
     
     If headingStart = 0 Then Exit Sub
     
     ' 2) 아래로 내려가며 섹션 경계(다음 제목: 레벨 무관) 찾기
     Dim q As Paragraph
-    Set q = doc.Range(headingStart, headingStart).Paragraphs(1).Next
+    Dim hp As Paragraph
+    Set hp = doc.Range(headingStart, headingStart).Paragraphs(1)
+    If hp Is Nothing Then Exit Sub
+    Set q = GetNextParagraphSkippingTables(doc, hp)
     
     Do While Not q Is Nothing
         lvl = q.OutlineLevel
@@ -758,9 +770,7 @@ Private Sub ComputeSectionForRange( _
             nextHeadingStart = q.Range.Start
             Exit Do
         End If
-        On Error Resume Next
-        Set q = q.Next
-        On Error GoTo SafeExit
+        Set q = GetNextParagraphSkippingTables(doc, q)
     Loop
     
     Exit Sub

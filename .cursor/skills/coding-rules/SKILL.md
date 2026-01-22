@@ -52,6 +52,10 @@ GetNearestHeadingTitleLazy = FormatHeadingTitle( _
   - 예: `FooBar arg1, arg2` (지양)  
   - 예: `result = FooBar(arg1, arg2)` (지향)
 
+### 4. 상수 선언
+- **상수 선언 우선**: 함수/서브 내에서 변경되지 않는 값은 
+  상수로 선언한다.
+
 ### 4. 이름 짓기
 - **가독성 우선**: 변수, 함수, 모듈 이름은 역할이 바로
   이해되도록 명확하게 짓는다.
