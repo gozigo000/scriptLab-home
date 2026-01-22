@@ -117,6 +117,7 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
         IsScreamingSnakeCase(currentWord) _
     ) Then
         If gPrevHighlight.Word <> "" Then
+            Call BeginCustomUndoRecord()
             Call RemoveHighlight(doc, gPrevHighlight.Word, GetPreviousHighlightedScopeRange(doc))
             gPrevHighlight.Word = ""
             gPrevHighlight.ScopeStart = 0
@@ -130,10 +131,14 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
     
     ' 이전 하이라이트 제거
     If gPrevHighlight.Word <> "" Then
+        Call BeginCustomUndoRecord()
         Call RemoveHighlight(doc, gPrevHighlight.Word, GetPreviousHighlightedScopeRange(doc))
     End If
     
     Application.ScreenUpdating = False
+    
+    ' 현재 섹션에 하이라이트 적용도 동일 UndoRecord로 포함
+    Call BeginCustomUndoRecord()
     
     ' 현재 섹션 범위에서 동일 단어 검색
     Set findRange = scopeRange.Duplicate
@@ -168,15 +173,14 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
     
 Cleanup:
     On Error Resume Next
+    Call EndCustomUndoRecord
     Application.ScreenUpdating = True
     isProcessingSelectionChange = False
     Exit Sub
     
 ErrorHandler:
     Debug.Print "선택 영역 검색 및 하이라이트 적용 중 오류: " & Err.Description
-    On Error Resume Next
-    Application.ScreenUpdating = True
-    isProcessingSelectionChange = False
+    Resume Cleanup
 End Sub
 
 ' (MARK) 이전 하이라이트 제거
