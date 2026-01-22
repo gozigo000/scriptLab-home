@@ -186,6 +186,10 @@ Public Sub a_ShowCursorLocationInfo()
     Dim pageNo As Long
     pageNo = lastInfo.PageNo
     
+    ' ===== pos(문서 내 문자 인덱스) =====
+    Dim pos As Long
+    pos = lastInfo.Position
+    
     ' ===== 영역 제목(탐색창:목차에 보이는 제목) =====
     Dim headingTitle As String
     headingTitle = GetCurrentHeadingTitle(selRng, 200)
@@ -208,6 +212,7 @@ Public Sub a_ShowCursorLocationInfo()
     
     msg = ""
     msg = msg & "페이지: " & pageNo & vbCrLf
+    msg = msg & "위치(pos): " & pos & vbCrLf
     msg = msg & "영역 제목: " & SafeInline(headingTitle) & vbCrLf
     msg = msg & "현재 단어: " & SafeInline(wordText) & vbCrLf
     msg = msg & "북마크: " & SafeInline(bmNames) & vbCrLf
