@@ -325,73 +325,64 @@ Private Function GetCurrentHeadingRangeLazy( _
     ' 문서 전환 시: 최근 N개 RAM 캐시에서 우선 복구(없으면 CustomXMLParts에서 로드)
     EnsureActiveDocumentCache doc, key, fp
     
-    Dim headingStart As Long
-    headingStart = 0
-    
-    ' 1) 최근 히트 섹션이면 O(1) (섹션 시작=현재 헤딩 시작)
+    ' 1) 최근 히트 섹션이면 O(1)
     If gLastIdx > 0 And gLastIdx <= gSecCount Then
         If pos >= gSecStart(gLastIdx) _
             And pos <= gSecEnd(gLastIdx) Then
-            headingStart = gSecStart(gLastIdx)
+            Dim endExclusive1 As Long
+            endExclusive1 = gSecEnd(gLastIdx) + 1
+            If endExclusive1 > doc.Content.End Then endExclusive1 = doc.Content.End
+            If endExclusive1 < gSecStart(gLastIdx) Then endExclusive1 = gSecStart(gLastIdx)
+            
+            Set GetCurrentHeadingRangeLazy = doc.Range(gSecStart(gLastIdx), endExclusive1)
+            TouchRamCacheEntry gDocKey, gFingerprint
+            Exit Function
         End If
     End If
     
     ' 2) 캐시된 섹션 구간에서 이진탐색
-    If headingStart = 0 Then
-        Dim idx As Long
-        idx = FindCachedSectionIndex(pos)
-        If idx > 0 Then
-            gLastIdx = idx
-            headingStart = gSecStart(idx)
-        End If
-    End If
-    
-    ' 3) 캐시 미스: 섹션을 계산하고 캐시에 추가(이후 호출 최적화)
-    If headingStart = 0 Then
-        Dim nextHeadingStart As Long
-        Dim headingLevel As Long
-        Dim headingTitle As String
-        ComputeSectionForRange doc, rng, headingStart, _
-            nextHeadingStart, headingLevel, headingTitle
+    Dim idx As Long
+    idx = FindCachedSectionIndex(pos)
+    If idx > 0 Then
+        gLastIdx = idx
         
-        If headingStart > 0 Then
-            Dim i2 As Long
-            i2 = AddOrUpdateSectionCache( _
-                headingStart, nextHeadingStart, _
-                headingLevel, headingTitle _
-            )
-            gLastIdx = i2
-            Call SaveCacheToDocument(doc)
-            UpsertRamCacheFromCurrent
-        End If
+        Dim endExclusive2 As Long
+        endExclusive2 = gSecEnd(idx) + 1
+        If endExclusive2 > doc.Content.End Then endExclusive2 = doc.Content.End
+        If endExclusive2 < gSecStart(idx) Then endExclusive2 = gSecStart(idx)
+        
+        Set GetCurrentHeadingRangeLazy = doc.Range(gSecStart(idx), endExclusive2)
+        TouchRamCacheEntry gDocKey, gFingerprint
+        Exit Function
     End If
     
-    If headingStart = 0 Then GoTo SafeExit
+    ' 3) 캐시 미스: 현재 위치 섹션을 계산하고 캐시에 추가
+    Dim headingStart As Long
+    Dim nextHeadingStart As Long
+    Dim headingLevel As Long
+    Dim headingTitle As String
+    ComputeSectionForRange doc, rng, headingStart, _
+        nextHeadingStart, headingLevel, headingTitle
     
-    ' 4) 아래로 가장 가까운 "다음 제목" 찾기 (레벨 무관, 가장 먼저 만나는 제목)
-    Dim nextHeadingStartComputed As Long
-    nextHeadingStartComputed = 0
-    
-    Dim q As Paragraph
-    Set q = rng.Paragraphs(1).Next
-    Do While Not q Is Nothing
-        Dim lvl As WdOutlineLevel
-        lvl = q.OutlineLevel
-        If lvl <> wdOutlineLevelBodyText Then
-            nextHeadingStartComputed = q.Range.Start
-            Exit Do
-        End If
-        On Error Resume Next
-        Set q = q.Next
-        On Error GoTo SafeExit
-    Loop
-    
-    If nextHeadingStartComputed = 0 Then nextHeadingStartComputed = doc.Content.End
-    If nextHeadingStartComputed < headingStart Then nextHeadingStartComputed = headingStart
-    
-    Set GetCurrentHeadingRangeLazy = doc.Range(headingStart, nextHeadingStartComputed)
-    TouchRamCacheEntry gDocKey, gFingerprint
-    Exit Function
+    If headingStart > 0 Then
+        idx = AddOrUpdateSectionCache( _
+            headingStart, nextHeadingStart, _
+            headingLevel, headingTitle _
+        )
+        gLastIdx = idx
+        
+        Dim endExclusive3 As Long
+        endExclusive3 = gSecEnd(idx) + 1
+        If endExclusive3 > doc.Content.End Then endExclusive3 = doc.Content.End
+        If endExclusive3 < gSecStart(idx) Then endExclusive3 = gSecStart(idx)
+        
+        Set GetCurrentHeadingRangeLazy = doc.Range(gSecStart(idx), endExclusive3)
+        ' 캐시가 늘어났으면 문서에 저장
+        Call SaveCacheToDocument(doc)
+        ' RAM 캐시도 최신 상태로 반영
+        UpsertRamCacheFromCurrent
+        Exit Function
+    End If
     
 SafeExit:
     Set GetCurrentHeadingRangeLazy = Nothing
