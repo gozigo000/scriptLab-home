@@ -12,6 +12,7 @@ Option Explicit
 '
 ' - snake_case: 전부 소문자/숫자 + 단어 구분은 '_' (연속/양끝 '_' 금지)
 '   예) my_var, my2_var3, my_url
+'   예) 특이케이스: mvp_lX_flag
 '
 ' 주의:
 ' - 빈 문자열/공백 포함/특수문자 포함은 False
@@ -26,7 +27,7 @@ Public Function IsPascalCase(ByVal str As String) As Boolean
 End Function
 
 Public Function IsSnakeCase(ByVal str As String) As Boolean
-    IsSnakeCase = TestRegex(str, "^[a-z][a-z0-9]*(_[a-z0-9]+)+$")
+    IsSnakeCase = TestRegex(str, "^[a-z][a-z0-9]*(_[a-zX0-9]+)+$")
 End Function
 
 Public Function IsScreamingSnakeCase(ByVal str As String) As Boolean
