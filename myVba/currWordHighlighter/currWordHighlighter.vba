@@ -36,12 +36,6 @@ Public isCurrWordHighlighterEnabled As Boolean ' 기능 ON/OFF 토글 (True=활�
 Public isProcessingSelectionChange As Boolean ' 무한루프 방지 플래그
 Public gPrevHighlight As TPrevHighlightInfo
 
-' (MARK) 디버그 로깅
-' - 표 안에서 서식(HighlightColorIndex) 변경이 발생할 때마다 Immediate Window에 로그를 남깁니다.
-Private Const LOG_TABLE_FORMAT_CHANGES As Boolean = True
-' - Find가 같은 매치를 반복 반환(stuck)하는 시점에만, 탈출(전진) 경로를 로그로 남깁니다.
-Private Const LOG_STUCK_ESCAPE_PATH As Boolean = True
-
 ' (MARK) 하이라이트 스타일
 ' 표 내부에서 Shading은 레이아웃 재계산을 자주 유발하므로,
 ' 텍스트 하이라이트(HighlightColorIndex)를 사용합니다.
@@ -62,7 +56,7 @@ Public Sub ToggleCurrWordHighlighter()
     
     If isCurrWordHighlighterEnabled Then
         ' 기능 활성화
-        Call showMsg("단어 하이라이트 기능이 활성화되었습니다.", "알림", vbInformation, 1000)
+        Call showMsg("단어 하이라이트 기능이 활성화되었습니다.", "알림", vbInformation, 500)
     Else
         ' 기능 비활성화
         ' 이전 하이라이트 제거
@@ -72,7 +66,7 @@ Public Sub ToggleCurrWordHighlighter()
             gPrevHighlight.ScopeStart = 0
             gPrevHighlight.ScopeEnd = 0
         End If
-        Call showMsg("단어 하이라이트 기능이 비활성화되었습니다.", "알림", vbInformation, 1000)
+        Call showMsg("단어 하이라이트 기능이 비활성화되었습니다.", "알림", vbInformation, 500)
     End If
 End Sub
 
@@ -151,12 +145,12 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
     ' 현재 섹션에 하이라이트 적용도 동일 UndoRecord로 포함
     Call BeginCustomUndoRecord()
     
-    ' 2-pass:
+    ' 2-PASS
     ' 1) 전체 검색 범위를 순회하며 매칭 영역(start/end) 수집
-    ' 2) 수집된 영역에 대해 하이라이트 적용
     Dim spans As Collection
     Set spans = CollectMatchSpans(scopeRange, currentWord)
     
+    ' 2) 수집된 영역에 대해 하이라이트 적용
     Dim span As Variant
     For Each span In spans
         Dim s As Long
@@ -167,10 +161,6 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
         If e > s Then
             Dim hit As Range
             Set hit = doc.Range(s, e)
-            
-            If LOG_TABLE_FORMAT_CHANGES And IsRangeInTable(hit) Then
-                Debug.Print "currWordHighlighter: [TABLE] apply highlight [" & CStr(hit.Start) & "," & CStr(hit.End) & ") word=" & currentWord
-            End If
             hit.HighlightColorIndex = CURRWORD_HIGHLIGHT_COLOR
         End If
     Next span
@@ -224,10 +214,6 @@ Public Sub RemoveHighlight( _
         If e > s Then
             Dim hit As Range
             Set hit = doc.Range(s, e)
-            
-            If LOG_TABLE_FORMAT_CHANGES And IsRangeInTable(hit) Then
-                Debug.Print "currWordHighlighter: [TABLE] remove highlight [" & CStr(hit.Start) & "," & CStr(hit.End) & ") word=" & searchText
-            End If
             hit.HighlightColorIndex = wdNoHighlight
         End If
     Next span
@@ -275,177 +261,6 @@ End Function
 ' ======================
 ' 커서 단어 하이라이트용 유틸
 ' ======================
-
-Private Function IsRangeInTable(ByVal rng As Range) As Boolean
-    On Error GoTo SafeExit
-    If rng Is Nothing Then GoTo SafeExit
-    IsRangeInTable = CBool(rng.Information(wdWithInTable))
-    Exit Function
-SafeExit:
-    IsRangeInTable = False
-End Function
-
-' (MARK) Find가 동일 매치를 반복 반환(표에서 흔함)할 때:
-' - "반드시 전진"하도록 다음 시작점을 계산합니다.
-'   - 표 밖: 최소 +1 전진
-'   - 표 안: 가능한 한 "표 안에서" 전진해서, 현재 셀/오른쪽 셀도 계속 검색되게 합니다.
-'     1) 현재 셀 내부에서 +1 전진(셀 끝 마커는 피함)
-'     2) 다음 셀 시작점
-'     3) (마지막) 표 끝(+1)로 탈출
-' - 실패 시 0 반환
-Private Function GetNextPosToEscapeStuck( _
-    ByVal foundRange As Range, _
-    ByVal scopeRange As Range, _
-    ByVal minPos As Long, _
-    Optional ByVal debugWord As String = "" _
-) As Long
-    On Error GoTo SafeExit
-    
-    If foundRange Is Nothing Then GoTo SafeExit
-    If scopeRange Is Nothing Then GoTo SafeExit
-
-    Dim nextPos As Long
-    nextPos = 0
-    
-    Dim escapePath As String
-    escapePath = ""
-    
-    Dim cellTextEnd As Long
-    cellTextEnd = -1
-
-    If IsRangeInTable(foundRange) Then
-        Dim t As Word.Table
-        Set t = foundRange.Tables(1)
-        
-        Dim c As Word.Cell
-        Set c = foundRange.Cells(1)
-        
-        ' 1) 현재 셀 내부에서 +1 전진(셀 끝 마커는 피함)
-        If Not c Is Nothing Then
-            cellTextEnd = c.Range.End - 1 ' End-of-cell marker 직전까지만 "텍스트"로 취급
-            If minPos + 1 <= cellTextEnd Then
-                nextPos = minPos + 1
-                escapePath = "table:cell:+1"
-            End If
-        End If
-
-        ' 2) 다음 셀 시작점
-        If Not c Is Nothing Then
-            Dim nextCell As Word.Cell
-            On Error Resume Next
-            Set nextCell = c.Next
-            On Error GoTo SafeExit
-            
-            If nextPos <= minPos And Not nextCell Is Nothing Then
-                nextPos = nextCell.Range.Start
-                escapePath = "table:cell.next"
-            End If
-        End If
-        
-        ' 3) 표 끝(+1)로 탈출(진짜 마지막 수단)
-        If nextPos <= minPos Then
-            If Not t Is Nothing Then
-                ' 표 끝까지 왔으면 표 밖으로, 아니면 최소 +1 전진으로 계속 표 안에서 진행
-                If minPos + 1 < t.Range.End Then
-                    nextPos = minPos + 1
-                    escapePath = "table:+1"
-                Else
-                    nextPos = t.Range.End + 1
-                    escapePath = "table:end+1"
-                End If
-            End If
-        End If
-    Else
-        ' 표 밖이면 최소 1글자 전진
-        nextPos = minPos + 1
-        escapePath = "outside:+1"
-    End If
-    
-    ' 범위 클램프
-    If nextPos < scopeRange.Start Then nextPos = scopeRange.Start
-    If nextPos > scopeRange.End Then nextPos = scopeRange.End
-    
-    ' 전진 실패면 0 반환
-    If nextPos <= minPos Then GoTo SafeExit
-    
-    If LOG_STUCK_ESCAPE_PATH Then
-        Dim foundS As Long
-        Dim foundE As Long
-        Dim scopeS As Long
-        Dim scopeE As Long
-        foundS = foundRange.Start
-        foundE = foundRange.End
-        scopeS = scopeRange.Start
-        scopeE = scopeRange.End
-        
-        Dim tableS As Long
-        Dim tableE As Long
-        tableS = -1
-        tableE = -1
-        If IsRangeInTable(foundRange) Then
-            On Error Resume Next
-            tableS = foundRange.Tables(1).Range.Start
-            tableE = foundRange.Tables(1).Range.End
-            On Error GoTo SafeExit
-        End If
-        
-        Debug.Print _
-            "currWordHighlighter: stuck-escape path=" & escapePath & _
-            " word=" & debugWord & _
-            " minPos=" & CStr(minPos) & _
-            " nextPos=" & CStr(nextPos) & _
-            " found=[" & CStr(foundS) & "," & CStr(foundE) & ")" & _
-            " scope=[" & CStr(scopeS) & "," & CStr(scopeE) & ")" & _
-            " table=[" & CStr(tableS) & "," & CStr(tableE) & ")" & _
-            " cellTextEnd=" & CStr(cellTextEnd)
-    End If
-    
-    GetNextPosToEscapeStuck = nextPos
-    Exit Function
-    
-SafeExit:
-    If LOG_STUCK_ESCAPE_PATH Then
-        Dim foundS2 As Long
-        Dim foundE2 As Long
-        Dim scopeS2 As Long
-        Dim scopeE2 As Long
-        foundS2 = -1
-        foundE2 = -1
-        scopeS2 = -1
-        scopeE2 = -1
-        On Error Resume Next
-        foundS2 = foundRange.Start
-        foundE2 = foundRange.End
-        scopeS2 = scopeRange.Start
-        scopeE2 = scopeRange.End
-        On Error GoTo SafeExit
-        
-        Dim tableS2 As Long
-        Dim tableE2 As Long
-        tableS2 = -1
-        tableE2 = -1
-        If Not foundRange Is Nothing Then
-            On Error Resume Next
-            If IsRangeInTable(foundRange) Then
-                tableS2 = foundRange.Tables(1).Range.Start
-                tableE2 = foundRange.Tables(1).Range.End
-            End If
-            On Error GoTo SafeExit
-        End If
-        
-        Debug.Print _
-            "currWordHighlighter: stuck-escape FAILED path=" & escapePath & _
-            " word=" & debugWord & _
-            " minPos=" & CStr(minPos) & _
-            " nextPos=" & CStr(nextPos) & _
-            " found=[" & CStr(foundS2) & "," & CStr(foundE2) & ")" & _
-            " scope=[" & CStr(scopeS2) & "," & CStr(scopeE2) & ")" & _
-            " table=[" & CStr(tableS2) & "," & CStr(tableE2) & ")" & _
-            " cellTextEnd=" & CStr(cellTextEnd) & _
-            " err=" & CStr(Err.Number) & ":" & Err.Description
-    End If
-    GetNextPosToEscapeStuck = 0
-End Function
 
 ' Find로 잡힌 구간이 "부분 문자열"이 아닌지(좌/우 경계가 식별자 문자가 아닌지) 확인
 Private Function IsBoundaryMatch(ByVal foundRange As Range, ByVal scopeRange As Range) As Boolean
@@ -495,6 +310,64 @@ Private Function MinLong(ByVal a As Long, ByVal b As Long) As Long
         MinLong = b
     End If
 End Function
+
+' (MARK) 표 셀 전용 수집: Find 대신 InStr 사용
+' - Word Range.Find는 표/셀 컨텍스트에서 "stuck(같은 매치 반복)"이 발생할 수 있어
+'   표 내부에서는 문자열 검색(InStr)로 위치를 계산합니다.
+Private Sub CollectInCellByInStr( _
+    ByVal cellSeg As Range, _
+    ByVal scopeRange As Range, _
+    ByVal searchText As String, _
+    ByVal seen As Object, _
+    ByVal results As Collection _
+)
+    On Error GoTo SafeExit
+    
+    If cellSeg Is Nothing Then Exit Sub
+    If scopeRange Is Nothing Then Exit Sub
+    If searchText = "" Then Exit Sub
+    
+    Dim txt As String
+    txt = CStr(cellSeg.Text)
+    If txt = "" Then Exit Sub
+    
+    Dim n As Long
+    n = Len(searchText)
+    If n <= 0 Then Exit Sub
+    
+    Dim i As Long
+    i = 1
+    
+    Do While i > 0
+        i = InStr(i, txt, searchText, vbBinaryCompare)
+        If i <= 0 Then Exit Do
+        
+        Dim absS As Long
+        Dim absE As Long
+        absS = cellSeg.Start + (i - 1)
+        absE = absS + n
+        
+        If absE > absS Then
+            Dim hit As Range
+            Set hit = cellSeg.Document.Range(absS, absE)
+            
+            If IsBoundaryMatch(hit, scopeRange) Then
+                Dim k As String
+                k = CStr(absS) & ":" & CStr(absE)
+                If Not seen.Exists(k) Then
+                    seen.Add k, True
+                    results.Add Array(absS, absE)
+                End If
+            End If
+        End If
+        
+        ' 다음 후보로 전진 (겹침 매치는 필요 없으므로 길이만큼 점프)
+        i = i + n
+        If i > Len(txt) Then Exit Do
+    Loop
+    
+SafeExit:
+End Sub
 
 ' scopeRange 전체를 "순회"하면서(표는 셀 단위, 표 밖은 문단 단위)
 ' searchText 매칭 영역(start/end)을 모아 반환합니다.
@@ -568,18 +441,36 @@ Private Function CollectMatchSpans(ByVal scopeRange As Range, ByVal searchText A
         ' 표 내부: 셀 단위로 수집
         Dim c As Word.Cell
         For Each c In t.Range.Cells
-            Dim cs As Long
-            Dim ce As Long
-            cs = c.Range.Start
-            ce = c.Range.End - 1 ' End-of-cell marker 제외
+            ' (중요) 표 셀은 doc.Range(cs, ce)로 다시 만들면 Word가 표 컨텍스트를 잃고
+            ' Find가 누락되는 케이스가 있어, Cell.Range.Duplicate를 직접 사용합니다.
+            Dim cellR As Range
+            Dim cellSeg As Range
+            Set cellR = c.Range
+            Set cellSeg = cellR.Duplicate
             
-            cs = MaxLong(cs, scopeS)
-            ce = MinLong(ce, scopeE)
+            ' 셀 끝 마커 제거:
+            ' Cell.Range.Text는 일반적으로 끝에 Chr(13) & Chr(7)가 붙습니다.
+            ' Find 안정성을 위해 둘 다 제외(가능한 경우)합니다.
+            ' 셀 끝 마커 제거(존재하는 것만 제거)
+            ' - 셀 끝에는 항상 Chr(7)이 있으나, 환경/구조에 따라 Chr(13)이 없을 수도 있어
+            '   무조건 2글자를 빼면 실제 텍스트가 잘릴 수 있습니다(예: "cbHeigh").
+            Do While cellSeg.End > cellSeg.Start
+                Dim lastCh As String
+                lastCh = cellSeg.Document.Range(cellSeg.End - 1, cellSeg.End).Text
+                If lastCh = Chr$(7) Or lastCh = Chr$(13) Then
+                    cellSeg.End = cellSeg.End - 1
+                Else
+                    Exit Do
+                End If
+            Loop
             
-            If ce > cs Then
-                Dim cellSeg As Range
-                Set cellSeg = doc.Range(cs, ce)
-                Call CollectInSegment(cellSeg, scopeRange, searchText, seen, results)
+            ' scopeRange로 클램프
+            If cellSeg.Start < scopeS Then cellSeg.Start = scopeS
+            If cellSeg.End > scopeE Then cellSeg.End = scopeE
+            
+            If cellSeg.End > cellSeg.Start Then
+                ' 표 셀에서는 Find를 쓰지 않고 InStr로 수집(= stuck 근본 제거)
+                Call CollectInCellByInStr(cellSeg, scopeRange, searchText, seen, results)
             End If
         Next c
         
@@ -663,16 +554,11 @@ Private Sub CollectInSegment( _
             nextPos = matchEndPos
             If nextPos <= ms Then nextPos = ms + 1
             If lastNextPos >= 0 And nextPos <= lastNextPos Then nextPos = lastNextPos + 1
-            
-            ' stuck: 같은 매치 반복 반환 시, 기존 탈출 로직을 사용(로그 포함)
+
+            ' 같은 매치를 반복 반환하는 경우(= stuck)에는 최소 1글자 전진
             If ms = prevS And matchEndPos = prevE Then
-                Dim forcedNextPos As Long
-                Dim minForwardPos As Long
-                minForwardPos = matchEndPos
-                If lastNextPos > minForwardPos Then minForwardPos = lastNextPos
-                
-                forcedNextPos = GetNextPosToEscapeStuck(seg, scopeRange, minForwardPos, searchText)
-                If forcedNextPos > 0 Then nextPos = forcedNextPos
+                nextPos = ms + 1
+                If lastNextPos >= 0 And nextPos <= lastNextPos Then nextPos = lastNextPos + 1
             End If
             
             prevS = ms
@@ -680,8 +566,7 @@ Private Sub CollectInSegment( _
             lastNextPos = nextPos
             
             If nextPos >= endLimit Then Exit Do
-            seg.Start = nextPos
-            seg.End = endLimit
+            seg.SetRange Start:=nextPos, End:=endLimit
         Loop
     End With
     
