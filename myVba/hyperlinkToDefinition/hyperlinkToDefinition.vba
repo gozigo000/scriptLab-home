@@ -45,9 +45,7 @@ Public Sub CreateHyperlinksToSelection()
     Application.ScreenUpdating = False
     
     ' Undo 스택에 하나의 액션으로 묶기 시작
-    Dim undoRecord As UndoRecord
-    Set undoRecord = Application.UndoRecord
-    undoRecord.StartCustomRecord "하이퍼링크 생성"
+    Call BeginCustomUndoRecord()
     
     ' 현재 선택 영역에 북마크 생성 (하이퍼링크 목적지)
     ' 북마크 이름에 사용할 수 없는 문자 제거 (공백, 특수문자 등)
@@ -230,7 +228,7 @@ Public Sub CreateHyperlinksToSelection()
     End With
     
     ' Undo 스택 묶기 종료
-    undoRecord.EndCustomRecord
+    Call EndCustomUndoRecord()
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -275,11 +273,7 @@ Public Sub CreateHyperlinksToSelection()
     
 ErrorHandler:
     ' Undo 스택 묶기 종료 (오류 발생 시에도)
-    On Error Resume Next
-    If Not undoRecord Is Nothing Then
-        undoRecord.EndCustomRecord
-    End If
-    On Error GoTo 0
+    Call EndCustomUndoRecord()
     
     Application.ScreenUpdating = True
     VBA.MsgBox "오류가 발생했습니다: " & Err.Description, vbCritical, "오류"
@@ -324,9 +318,7 @@ Public Sub RemoveHyperlinksFromSelection()
     Application.ScreenUpdating = False
     
     ' Undo 스택에 하나의 액션으로 묶기 시작
-    Dim undoRecord As UndoRecord
-    Set undoRecord = Application.UndoRecord
-    undoRecord.StartCustomRecord "하이퍼링크 제거"
+    Call BeginCustomUndoRecord()
     
     ' 문서 전체에서 동일한 텍스트 검색
     Set findRange = ActiveDocument.Content
@@ -356,7 +348,7 @@ Public Sub RemoveHyperlinksFromSelection()
     End With
     
     ' Undo 스택 묶기 종료
-    undoRecord.EndCustomRecord
+    Call EndCustomUndoRecord()
     
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
@@ -371,11 +363,7 @@ Public Sub RemoveHyperlinksFromSelection()
     
 ErrorHandler:
     ' Undo 스택 묶기 종료 (오류 발생 시에도)
-    On Error Resume Next
-    If Not undoRecord Is Nothing Then
-        undoRecord.EndCustomRecord
-    End If
-    On Error GoTo 0
+    Call EndCustomUndoRecord()
     
     Application.ScreenUpdating = True
     VBA.MsgBox "오류가 발생했습니다: " & Err.Description, vbCritical, "오류"

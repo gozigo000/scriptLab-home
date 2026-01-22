@@ -45,6 +45,10 @@ GetNearestHeadingTitleLazy = FormatHeadingTitle( _
   인자 의미, 반환값을 주석으로 남긴다.
 - **함수 호출 방식**: 함수 호출 시에는 항상 괄호를 사용하고,
   괄호 안에 인자를 작성한다.  
+  - 예: `Call FooBar` (지양)
+  - 예: `Call FooBar()` (지향)
+  - 예: `Call FooBar arg1, arg2` (지양)
+  - 예: `Call FooBar (arg1, arg2)` (지향)
   - 예: `FooBar arg1, arg2` (지양)  
   - 예: `result = FooBar(arg1, arg2)` (지향)
 

@@ -173,7 +173,7 @@ Public Sub HighlightCurrWord(ByVal targetRange As Range)
     
 Cleanup:
     On Error Resume Next
-    Call EndCustomUndoRecord
+    Call EndCustomUndoRecord()
     Application.ScreenUpdating = True
     isProcessingSelectionChange = False
     Exit Sub

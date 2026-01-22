@@ -12,7 +12,6 @@
 ' 모듈 레벨 변수
 Public isBracketMatcherEnabled As Boolean ' 기능 ON/OFF 토글 (True=활성화)
 Public maxBracketDepth As Long ' 최대 표시 깊이 (0 = 메인 괄호만, 1 = 1단계 중첩까지, ...)
-Public isUndoRecordActive As Boolean ' UndoRecord가 활성화되어 있는지 추적
 Public previousBracketRanges As Collection ' 이전에 하이라이트된 괄호 범위들 저장
 Public previousBracketColors As Collection ' 이전 괄호의 원래 배경색 저장
 Public previousOperatorRanges As Collection ' 이전에 빨강 처리된 연산자 범위들 저장
@@ -23,7 +22,6 @@ Public isProcessingBracketMatch As Boolean ' 무한루프 방지 플래그
 Public Sub InitializeBracketMatcher()
     isBracketMatcherEnabled = False ' 초기 상태: 비활성화
     maxBracketDepth = 1 ' 기본값: 1단계 중첩까지 표시
-    isUndoRecordActive = False
     Set previousBracketRanges = New Collection
     Set previousBracketColors = New Collection
     Set previousOperatorRanges = New Collection
@@ -44,13 +42,9 @@ Public Sub ToggleBracketMatcher()
         Call HighlightBracket(Selection.Range)
         On Error GoTo 0
     Else
-        ' 끌 때는 즉시 하이라이트 정리 + UndoRecord 종료
+        ' 끌 때는 즉시 하이라이트 정리
         On Error Resume Next
         Call RemoveBracketHighlight
-        If isUndoRecordActive Then
-            Application.UndoRecord.EndCustomRecord
-            isUndoRecordActive = False
-        End If
         On Error GoTo 0
     End If
     
@@ -73,14 +67,9 @@ Public Sub HighlightBracket(ByVal targetRange As Range)
     ' 선택 영역의 길이가 0이 아니면 종료 (텍스트가 선택된 경우)
     If targetRange.Start <> targetRange.End Then
         ' 선택 영역이 있으면 이전 하이라이트만 제거하고 종료
+        On Error Resume Next
         Call RemoveBracketHighlight
-        ' 하이라이트가 완전히 제거되었으므로 CustomRecord 종료
-        If isUndoRecordActive Then
-            On Error Resume Next
-            Application.UndoRecord.EndCustomRecord
-            On Error Resume Next
-            isUndoRecordActive = False
-        End If
+        On Error GoTo 0
         Exit Sub
     End If
     
@@ -93,10 +82,6 @@ Public Sub HighlightBracket(ByVal targetRange As Range)
     If Not isBracketMatcherEnabled Then
         On Error Resume Next
         Call RemoveBracketHighlight
-        If isUndoRecordActive Then
-            Application.UndoRecord.EndCustomRecord
-            isUndoRecordActive = False
-        End If
         On Error GoTo 0
         Exit Sub
     End If
@@ -105,6 +90,7 @@ Public Sub HighlightBracket(ByVal targetRange As Range)
     isProcessingBracketMatch = True
     
     On Error GoTo ErrorHandler
+    Call BeginCustomUndoRecord()
     
     Dim cursorPos As Long
     Dim originalRange As Range
@@ -129,21 +115,16 @@ Public Sub HighlightBracket(ByVal targetRange As Range)
         GoTo Cleanup
     End If
     
-    ' 괄호도 없고, 괄호 내부도 아니면 CustomRecord 종료
-    If isUndoRecordActive Then
-        On Error Resume Next
-        Application.UndoRecord.EndCustomRecord
-        On Error GoTo ErrorHandler
-        isUndoRecordActive = False
-    End If
-    
 Cleanup:
+    On Error Resume Next
+    Call EndCustomUndoRecord()
+    On Error GoTo 0
     isProcessingBracketMatch = False
     Exit Sub
     
 ErrorHandler:
     Debug.Print "괄호 매칭 중 오류: " & Err.Description
-    isProcessingBracketMatch = False
+    Resume Cleanup
 End Sub
 
 ' 괄호 쌍을 찾는 함수 (검색 범위를 bounds로 제한)
@@ -363,9 +344,7 @@ End Function
 Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
     On Error GoTo ErrorHandler
     
-    Dim undoRecordName As String
     Dim highlightColors() As Long
-    Dim colorIndex As Long
     Dim openRange As Range
     Dim closeRange As Range
     Dim innerRange As Range
@@ -409,15 +388,6 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
         Call RemoveBracketHighlight
     End If
     
-    ' CustomRecord가 활성화되어 있지 않으면 시작
-    If Not isUndoRecordActive Then
-        undoRecordName = "BracketHighlight_" & Timer
-        On Error Resume Next
-        Application.UndoRecord.StartCustomRecord undoRecordName
-        On Error GoTo ErrorHandler
-        isUndoRecordActive = True
-    End If
-    
     ' 메인 괄호쌍과 중첩된 모든 괄호쌍 하이라이트
     Call HighlightNestedBrackets(openRange, closeRange, highlightColors)
 
@@ -434,11 +404,6 @@ Private Sub HighlightBracketPair(bracket1Range As Range, bracket2Range As Range)
 ErrorHandler:
     Debug.Print "괄호 하이라이트 중 오류: " & Err.Description
     Application.ScreenUpdating = True
-    On Error Resume Next
-    If isUndoRecordActive Then
-        Application.UndoRecord.EndCustomRecord
-        isUndoRecordActive = False
-    End If
 End Sub
 
 ' 메인(깊이 0) 괄호 내부에서만 특정 문자/연산자의 글자색을 빨강으로 표시
@@ -668,7 +633,7 @@ Public Sub RemoveBracketHighlight()
     Dim highlightRange As Range
     Dim opRange As Range
     
-    ' 이전 하이라이트가 전혀 없으면 종료 (CustomRecord는 유지)
+    ' 이전 하이라이트가 전혀 없으면 종료
     Dim hasAny As Boolean
     hasAny = False
     If Not previousBracketRanges Is Nothing Then
@@ -678,6 +643,9 @@ Public Sub RemoveBracketHighlight()
         If previousOperatorRanges.Count > 0 Then hasAny = True
     End If
     If Not hasAny Then Exit Sub
+    
+    ' 단독 호출 시에도 Undo 1회로 묶이도록 자동 래핑
+    Call BeginCustomUndoRecord()
     
     ' 화면 업데이트 일시 중지
     Application.ScreenUpdating = False
@@ -711,8 +679,10 @@ Public Sub RemoveBracketHighlight()
     ' 화면 업데이트 재개
     Application.ScreenUpdating = True
     
-    ' CustomRecord는 항상 유지 (종료하지 않음)
-    
+Cleanup:
+    On Error Resume Next
+    Call EndCustomUndoRecord()
+    On Error GoTo 0
     Exit Sub
     
 ErrorHandler:
@@ -723,4 +693,5 @@ ErrorHandler:
     Set previousBracketColors = New Collection
     Set previousOperatorRanges = New Collection
     Set previousOperatorColors = New Collection
+    Resume Cleanup
 End Sub
