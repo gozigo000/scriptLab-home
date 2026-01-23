@@ -21,11 +21,19 @@ Public Sub formatKipoSpec()
     Set doc = ActiveDocument
 
     Call SetPageFormat(doc)
-    Call SetDefaultParagraphFormat(doc)
-
+    Call SetNormalStyleDefaults(doc)
+    Call SetDocumentParagraphDefaults(doc)
     Call SetHeadingStyles(doc)
+    Call ResetDirectFormattingAndReapplyStyles(doc)
+
+    Call InsertBlankLinesForKipoSections(doc)
+    Call InsertBlankLinesBetweenClaimHeadings(doc)
+    Call InsertBlankLinesBeforeFigureHeadings(doc)
     Call ApplyHeadingStyles(doc)
     Call AdjustClaimHeadingLevels(doc)
+
+    Call ColorizeEnglishLettersAndDigits(doc)
+
 
     Call ShowNavigationPane()
     GoTo SafeExit
@@ -36,6 +44,48 @@ ErrorHandler:
 
 SafeExit:
     Call EndCustomUndoRecord()
+End Sub
+
+' 영문 대문자/소문자/숫자를 각각 다른 색으로 표시합니다.
+' - 대문자: 진한 파랑
+' - 소문자: 진한 초록
+' - 숫자: 진한 빨강
+Private Sub ColorizeEnglishLettersAndDigits(ByVal doc As Document)
+    On Error GoTo SafeExit
+    ' Call ApplyColorByWildcard(doc, "[a-zA-Z_]@", RGB(237, 125, 49), True)
+    ' Call ApplyColorByWildcard(doc, "[a-z]@", RGB(0, 153, 74), True)
+    ' Call ApplyColorByWildcard(doc, "[0-9]@", RGB(204, 0, 0), False)
+SafeExit:
+End Sub
+
+Private Sub ApplyColorByWildcard( _
+    ByVal doc As Document, _
+    ByVal pattern As String, _
+    ByVal rgbColor As Long, _
+    ByVal matchCase As Boolean _
+)
+    On Error GoTo SafeExit
+
+    Dim rng As Range
+    Set rng = doc.Content
+
+    With rng.Find
+        .ClearFormatting
+        .Text = pattern
+        .Forward = True
+        .Wrap = wdFindStop
+        .Format = False
+        .MatchWildcards = True
+        .MatchCase = matchCase
+    End With
+
+    Do While rng.Find.Execute
+        rng.Font.Color = rgbColor
+
+        rng.Collapse Direction:=wdCollapseEnd
+    Loop
+
+SafeExit:
 End Sub
 
 ' 페이지 포맷 설정
@@ -49,55 +99,124 @@ Private Sub SetPageFormat(ByVal doc As Document)
     End With
 End Sub
 
-' 기본 단락 포맷 설정
-Private Sub SetDefaultParagraphFormat(ByVal doc As Document)
-    With doc.Content.ParagraphFormat
-        .Alignment = wdAlignParagraphJustify
-        .LineSpacingRule = wdLineSpaceDouble
+' =============================================================================
+' Normal(기본) 스타일 기본값
+' =============================================================================
+
+' Normal(기본) 스타일의 폰트/단락 서식을 한 곳에서 설정합니다.
+Private Sub SetNormalStyleDefaults(ByVal doc As Document)
+    On Error GoTo SafeExit
+
+    Const DEFAULT_FONT_SIZE As Single = 12
+    Const DEFAULT_FIRST_LINE_INDENT_CM As Single = 1.41
+    Const DEFAULT_LINE_SPACING_MULTIPLE As Single = 1.8
+
+    ' "기본 단락 스타일"은 Normal(기본) 스타일을 의미합니다.
+    ' doc.Content.ParagraphFormat에 들여쓰기를 주면 제목 스타일에도 직접 서식으로
+    ' 적용될 수 있어, Normal 스타일에만 들여쓰기/폰트 크기를 적용합니다.
+    With doc.Styles(wdStyleNormal).Font
+        .NameFarEast = "맑은 고딕"
+        .NameAscii = "Times New Roman"
+        .NameOther = "Times New Roman"
+        .Size = DEFAULT_FONT_SIZE
     End With
+
+    With doc.Styles(wdStyleNormal).ParagraphFormat
+        .Alignment = wdAlignParagraphJustify
+        .LineSpacingRule = wdLineSpaceMultiple
+        .LineSpacing = LinesToPoints(DEFAULT_LINE_SPACING_MULTIPLE)
+        .SpaceBeforeAuto = False
+        .SpaceAfterAuto = False
+        .SpaceBefore = 0
+        .SpaceAfter = 0
+        .FirstLineIndent = CentimetersToPoints(DEFAULT_FIRST_LINE_INDENT_CM)
+        .LeftIndent = 0
+        .RightIndent = 0
+    End With
+
+SafeExit:
+End Sub
+
+' 문서 전체 기본 단락 서식(직접 서식)을 설정합니다.
+' - 제목/기타 스타일까지 영향이 갈 수 있으므로, 들여쓰기는 여기서 건드리지 않습니다.
+Private Sub SetDocumentParagraphDefaults(ByVal doc As Document)
+    On Error GoTo SafeExit
+
+    Dim baseParaFmt As ParagraphFormat
+    Set baseParaFmt = doc.Styles(wdStyleNormal).ParagraphFormat
+
+    With doc.Content.ParagraphFormat
+        .Alignment = baseParaFmt.Alignment
+        .LineSpacingRule = baseParaFmt.LineSpacingRule
+        .LineSpacing = baseParaFmt.LineSpacing
+        .SpaceBeforeAuto = False
+        .SpaceAfterAuto = False
+        .SpaceBefore = 0
+        .SpaceAfter = 0
+    End With
+
+SafeExit:
 End Sub
 
 ' 제목(1-9) 스타일 설정
-'  "【"가 있는 첫 번째 단락의 스타일로 설정합니다.
+' - Normal(기본) 스타일과 동일하게 맞추되, 들여쓰기만 제거합니다.
 Private Sub SetHeadingStyles(ByVal doc As Document)
-    Dim anchorPara As Paragraph
-    Set anchorPara = FindFirstParagraphContaining(doc, "【")
-    If anchorPara Is Nothing Then Exit Sub
+    On Error GoTo SafeExit
 
-    Dim anchorRng As Range
-    Set anchorRng = anchorPara.Range.Duplicate
+    Dim baseFont As Font
+    Dim baseParaFmt As ParagraphFormat
+
+    Set baseFont = doc.Styles(wdStyleNormal).Font
+    Set baseParaFmt = doc.Styles(wdStyleNormal).ParagraphFormat
 
     Dim i As Long
     For i = 1 To 9
         With doc.Styles("제목 " & CStr(i))
             .AutomaticallyUpdate = False
-            .Font = anchorRng.Font
-            .ParagraphFormat = anchorRng.ParagraphFormat
-            .ParagraphFormat.KeepWithNext = True
+            .Font = baseFont
 
-            If i = 1 Then
-                .ParagraphFormat.Alignment = wdAlignParagraphCenter
-            Else
-                .ParagraphFormat.Alignment = wdAlignParagraphJustify
-            End If
+            ' Heading 의미(OutlineLevel 등)는 유지하고, "보이는 서식"만 Normal과 동일하게
+            ' 맞춥니다. (줄간격/문단 전후 간격/정렬 등)
+            With .ParagraphFormat
+                .LineSpacingRule = baseParaFmt.LineSpacingRule
+                .LineSpacing = baseParaFmt.LineSpacing
+                .SpaceBeforeAuto = False
+                .SpaceAfterAuto = False
+                .SpaceBefore = 0
+                .SpaceAfter = 0
+
+                If i = 1 Then
+                    .Alignment = wdAlignParagraphCenter
+                Else
+                    .Alignment = wdAlignParagraphJustify
+                End If
+
+                ' 들여쓰기만 제거(첫 줄/좌/우)
+                .FirstLineIndent = 0
+                .LeftIndent = 0
+                .RightIndent = 0
+
+                .KeepWithNext = True
+            End With
         End With
     Next i
+
+SafeExit:
 End Sub
 
-Private Function FindFirstParagraphContaining( _
-    ByVal doc As Document, _
-    ByVal needle As String _
-) As Paragraph
-    Dim para As Paragraph
-    For Each para In doc.Paragraphs
-        If InStr(para.Range.Text, needle) > 0 Then
-            Set FindFirstParagraphContaining = para
-            Exit Function
-        End If
-    Next para
+' 문서 전체에서 "직접 서식"을 제거하고, 각 문단이 가진 스타일 서식을 다시 적용합니다.
+' - 본문 폰트가 Normal 변경을 따라오지 않는 경우(직접 서식 잔존) 해결용
+Private Sub ResetDirectFormattingAndReapplyStyles(ByVal doc As Document)
+    On Error GoTo SafeExit
 
-    Set FindFirstParagraphContaining = Nothing
-End Function
+    Dim rng As Range
+    Set rng = doc.Content
+
+    rng.Font.Reset
+    rng.ParagraphFormat.Reset
+
+SafeExit:
+End Sub
 
 Private Sub ApplyHeadingStyles(ByVal doc As Document)
     Dim rng As Range
@@ -153,6 +272,151 @@ Private Sub ApplyHeadingStyleToBracketParagraph(ByVal para As Paragraph)
         para.Style = "제목 2"
     End If
 End Sub
+
+Private Sub InsertBlankLinesForKipoSections(ByVal doc As Document)
+    On Error GoTo SafeExit
+
+    Dim i As Long
+    For i = doc.Paragraphs.Count To 1 Step -1
+        Dim para As Paragraph
+        Set para = doc.Paragraphs(i)
+
+        If ShouldInsertBlankLineAbove(para.Range.Text) Then
+            Call EnsureOneBlankParagraphBefore(doc, para)
+        End If
+    Next i
+
+SafeExit:
+End Sub
+
+Private Sub InsertBlankLinesBetweenClaimHeadings(ByVal doc As Document)
+    On Error GoTo SafeExit
+
+    Dim i As Long
+    For i = doc.Paragraphs.Count To 2 Step -1
+        Dim para As Paragraph
+        Dim prevPara As Paragraph
+
+        Set para = doc.Paragraphs(i)
+        If Not IsClaimHeadingParagraphText(para.Range.Text) Then GoTo ContinueLoop
+
+        If Not HasPreviousClaimHeading(doc, i - 1) Then GoTo ContinueLoop
+
+        Set prevPara = doc.Paragraphs(i - 1)
+        If TextHasOnlyWhitespace(prevPara.Range.Text) Then GoTo ContinueLoop
+
+        Call EnsureOneBlankParagraphBefore(doc, para)
+
+ContinueLoop:
+    Next i
+
+SafeExit:
+End Sub
+
+Private Sub InsertBlankLinesBeforeFigureHeadings(ByVal doc As Document)
+    On Error GoTo SafeExit
+
+    Dim i As Long
+    For i = doc.Paragraphs.Count To 2 Step -1
+        Dim para As Paragraph
+        Dim prevPara As Paragraph
+
+        Set para = doc.Paragraphs(i)
+        If Not IsFigureHeadingParagraphText(para.Range.Text) Then GoTo ContinueLoop
+
+        Set prevPara = doc.Paragraphs(i - 1)
+        If TextHasOnlyWhitespace(prevPara.Range.Text) Then GoTo ContinueLoop
+
+        Call EnsureOneBlankParagraphBefore(doc, para)
+
+ContinueLoop:
+    Next i
+
+SafeExit:
+End Sub
+
+Private Function HasPreviousClaimHeading(ByVal doc As Document, ByVal fromIndex As Long) As Boolean
+    Dim i As Long
+    For i = fromIndex To 1 Step -1
+        If IsClaimHeadingParagraphText(doc.Paragraphs(i).Range.Text) Then
+            HasPreviousClaimHeading = True
+            Exit Function
+        End If
+    Next i
+    HasPreviousClaimHeading = False
+End Function
+
+Private Function IsClaimHeadingParagraphText(ByVal paraText As String) As Boolean
+    ' ex) 【청구항 1】, 【청구항1】, 【청구항   12】 ...
+    IsClaimHeadingParagraphText = TestRegex(paraText, "^\s*【청구항\s*\d+】")
+End Function
+
+Private Function IsFigureHeadingParagraphText(ByVal paraText As String) As Boolean
+    ' ex) 【도 1】, 【도1】, 【도   12】 ...
+    IsFigureHeadingParagraphText = TestRegex(paraText, "^\s*【도\s*\d+】")
+End Function
+
+Private Function ShouldInsertBlankLineAbove(ByVal paraText As String) As Boolean
+    ShouldInsertBlankLineAbove = _
+        InStr(paraText, "【발명의 상세한 설명") > 0 Or _
+        InStr(paraText, "【도면의 간단한 설명") > 0 Or _
+        InStr(paraText, "【발명의 실시를 위한 형태") > 0
+End Function
+
+Private Sub EnsureOneBlankParagraphBefore(ByVal doc As Document, ByVal para As Paragraph)
+    On Error GoTo SafeExit
+
+    If IsFirstParagraph(doc, para) Then
+        Dim startIp As Range
+        Set startIp = doc.Range(Start:=0, End:=0)
+        startIp.InsertBefore vbCr
+        Exit Sub
+    End If
+
+    Dim prevPara As Paragraph
+    Set prevPara = GetPreviousParagraph(doc, para)
+    If prevPara Is Nothing Then GoTo SafeExit
+
+    If TextHasOnlyWhitespace(prevPara.Range.Text) Then Exit Sub
+
+    Dim ip As Range
+    Set ip = doc.Range(Start:=para.Range.Start, End:=para.Range.Start)
+    ip.InsertBefore vbCr
+
+SafeExit:
+End Sub
+
+Private Function IsFirstParagraph(ByVal doc As Document, ByVal para As Paragraph) As Boolean
+    On Error GoTo SafeExit
+    IsFirstParagraph = (doc.Range(0, para.Range.Start).Paragraphs.Count <= 1)
+    Exit Function
+SafeExit:
+    IsFirstParagraph = False
+End Function
+
+Private Function GetPreviousParagraph(ByVal doc As Document, ByVal para As Paragraph) As Paragraph
+    On Error GoTo SafeExit
+    If para.Range.Start <= 0 Then GoTo SafeExit
+
+    Dim r As Range
+    Set r = doc.Range(Start:=para.Range.Start - 1, End:=para.Range.Start - 1)
+    Set GetPreviousParagraph = r.Paragraphs(1)
+    Exit Function
+
+SafeExit:
+    Set GetPreviousParagraph = Nothing
+End Function
+
+Private Function TextHasOnlyWhitespace(ByVal s As String) As Boolean
+    Dim i As Long
+    For i = 1 To Len(s)
+        If Asc(Mid$(s, i, 1)) > 32 Then
+            TextHasOnlyWhitespace = False
+            Exit Function
+        End If
+    Next i
+    TextHasOnlyWhitespace = True
+End Function
 
 Private Sub AdjustClaimHeadingLevels(ByVal doc As Document)
     Dim dict As Object
