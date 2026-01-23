@@ -11,23 +11,35 @@
 
 ' 선택 영역으로 하이퍼링크 생성
 Public Sub CreateHyperlinksToSelection()
-    On Error GoTo ErrorHandler
-    
-    ' 선택 영역이 비어있거나 단어가 아닌 경우 종료
     If Selection.Type = wdSelectionIP Then
         VBA.MsgBox "단어를 선택한 후 실행해주세요.", vbExclamation, "알림"
         Exit Sub
     End If
+    
+    Call CreateHyperlinksToRange(Selection.Range)
+End Sub
+
+' Range로 하이퍼링크 생성 (Selection 없이 호출 가능)
+Public Sub CreateHyperlinksToRange(ByVal sourceRange As Range)
+    On Error GoTo ErrorHandler
     
     Dim selectedText As String
     Dim originalRange As Range
     Dim findRange As Range
     Dim bookmarkName As String
     Dim hyperlinkCount As Long
+    Dim doc As Document
     
-    ' 현재 선택 영역 저장
-    Set originalRange = Selection.Range.Duplicate
-    selectedText = Trim(Selection.Text)
+    If sourceRange Is Nothing Then
+        VBA.MsgBox "유효한 Range를 전달해주세요.", vbExclamation, "알림"
+        Exit Sub
+    End If
+    
+    Set doc = sourceRange.Document
+    
+    ' 현재 범위 저장
+    Set originalRange = sourceRange.Duplicate
+    selectedText = Trim(sourceRange.Text)
     
     ' 줄바꿈 기호가 있으면 종료 (단일 단어만 지원)
     If InStr(selectedText, vbCrLf) > 0 Or InStr(selectedText, vbLf) > 0 Or InStr(selectedText, vbCr) > 0 Then
@@ -69,7 +81,7 @@ Public Sub CreateHyperlinksToSelection()
     
     ' 기존 북마크가 있으면 삭제
     On Error Resume Next
-    ActiveDocument.Bookmarks(bookmarkName).Delete
+    doc.Bookmarks(bookmarkName).Delete
     On Error GoTo ErrorHandler
     
     ' 현재 선택 영역에 북마크 추가
@@ -86,13 +98,13 @@ Public Sub CreateHyperlinksToSelection()
         paragraphText = Left(paragraphText, Len(paragraphText) - 1)
     End If
     
-    ' 선택한 단어를 쌍따옴표로 강조
-    If InStr(paragraphText, selectedText) > 0 Then
-        paragraphText = Replace(paragraphText, selectedText, """" & selectedText & """")
-    End If
+    ' ' 선택한 단어를 쌍따옴표로 강조
+    ' If InStr(paragraphText, selectedText) > 0 Then
+    '     paragraphText = Replace(paragraphText, selectedText, """" & selectedText & """")
+    ' End If
     
     ' 문서 전체에서 동일한 텍스트 검색
-    Set findRange = ActiveDocument.Content
+    Set findRange = doc.Content
     hyperlinkCount = 0
     Dim previousStart As Long
     Dim previousEnd As Long
@@ -126,7 +138,7 @@ Public Sub CreateHyperlinksToSelection()
             ' 북마크가 존재하는지 확인하고 범위 비교
             On Error Resume Next
             Dim bookmarkRange As Range
-            Set bookmarkRange = ActiveDocument.Bookmarks(bookmarkName).Range
+            Set bookmarkRange = doc.Bookmarks(bookmarkName).Range
             If Err.Number = 0 Then
                 ' findRange가 북마크 영역과 겹치는지 확인
                 If findRange.Start >= bookmarkRange.Start And findRange.End <= bookmarkRange.End Then
@@ -165,7 +177,7 @@ Public Sub CreateHyperlinksToSelection()
                 
                 ' 하이퍼링크 추가 (같은 문서 내 북마크로 연결)
                 Dim newHyperlink As Hyperlink
-                Set newHyperlink = ActiveDocument.Hyperlinks.Add( _
+                Set newHyperlink = doc.Hyperlinks.Add( _
                     Anchor:=targetRange, _
                     Address:="", _
                     SubAddress:=bookmarkName, _
@@ -221,7 +233,7 @@ Public Sub CreateHyperlinksToSelection()
             End If
             
             ' 문서 끝에 도달했는지 확인
-            If findRange.Start >= ActiveDocument.Content.End - 1 Then
+            If findRange.Start >= doc.Content.End - 1 Then
                 Exit Do
             End If
         Loop
@@ -247,16 +259,16 @@ Public Sub CreateHyperlinksToSelection()
         
         ' 문서 변수 확인: 스타일이 이미 수정되었는지 확인
         Dim varValue As String
-        varValue = ActiveDocument.Variables("HyperlinkStyleModified").Value
+        varValue = doc.Variables("HyperlinkStyleModified").Value
         If Err.Number = 0 And varValue = "True" Then
             ' 이미 스타일이 수정된 경우
             styleModified = True
         Else
             ' 문서 변수가 없거나 False인 경우, 변수 추가/설정
             Err.Clear
-            ActiveDocument.Variables("HyperlinkStyleModified").Value = "True"
+            doc.Variables("HyperlinkStyleModified").Value = "True"
             If Err.Number <> 0 Then
-                ActiveDocument.Variables.Add Name:="HyperlinkStyleModified", Value:="True"
+                doc.Variables.Add Name:="HyperlinkStyleModified", Value:="True"
             End If
         End If
         On Error GoTo ErrorHandler

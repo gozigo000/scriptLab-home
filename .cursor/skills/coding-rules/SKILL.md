@@ -48,7 +48,9 @@ GetNearestHeadingTitleLazy = FormatHeadingTitle( _
   - 예: `Call FooBar` (지양)
   - 예: `Call FooBar()` (지향)
   - 예: `Call FooBar arg1, arg2` (지양)
-  - 예: `Call FooBar (arg1, arg2)` (지향)
+  - 예: `Call FooBar(arg1, arg2)` (지향)
+  - 예: `Object.FooBar arg1, arg2` (지양)
+  - 예: `Object.FooBar(arg1, arg2)` (지향)
 - **부작용 방지**: '인자 변경(side effect)이 생기는 호출'을 
   피하고 '반환값으로 재할당'하는 패턴을 사용한다.
   - 예: `Call FooBar(FooBarWillModifyMe)` (지양)
