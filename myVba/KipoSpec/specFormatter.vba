@@ -9,6 +9,41 @@ Option Explicit
 ' Public API:
 '   - formatKipoSpec()
 ' =============================================================================
+' TODO:
+' 
+' [KIPO포매터]
+' 청구범위 청구항 하이퍼링크
+' 도 #a 하이퍼링크 (도 1, 도 11 구분 주의)
+' 도면들 들여쓰기 제거
+' 볼드체 문단 -> 제목 2 & 들여쓰기 유지 & 위에 한 줄 추가
+' 영어(대/소문자), 숫자 색칠
+' 도 #a 배경 색칠
+' 상용구 배경 어둡게 색칠: 완전 일치 => 어둡게  /  부분 일치 => 덜 어둡게
+' 
+' CreateHyperlinksToSelection 함수가 Range 인수를 받도록 수정
+' clsAppEvents 객체 유지하기
+' 문서 열었을 때 개요 접기 상태 세팅
+' 
+' [하이라이트 고려대상]
+' C, TL, TR, BL, BR, L', T', BL', TR', TL' , L0, L1, L2
+' non-CCP, SAD, IBC, 
+' N
+' rec'L
+' HEVC, VVC, ECM, ECM-11.0
+' 아래첨자: 빨간색 칠하기
+' 
+' [US OA 포매터]
+' 날짜 색칠: March 16, 2013  /  08/20/2025
+' 법조문 색칠: 35 U.S.C. 102  /  35 U.S.C. 102 and 103  /  35 U.S.C. 102(a)(1)
+' 인용문헌 색칠: D1, D2, ... /  Zhang et al.  /  
+' 심사관 색칠: The Examiner / the examiner 
+' 출원인 색칠: The applicant
+' 청구항 색칠: claims #-##  /  claim #  /  Claims 1, 8, 10, 14, 16  /  
+' 도면 색칠: Figure 6  /  Fig. 11  /  
+' 문단 색칠: [0032]
+' 이탤릭체(인용부분) 색칠: 
+' have become moot (거절이유 치유) 색칠
+' =============================================================================
 
 ' 실행 매크로.
 ' - "【...】" 단락에 제목 스타일(1~3)을 적용합니다.
@@ -109,7 +144,7 @@ Private Sub SetNormalStyleDefaults(ByVal doc As Document)
 
     Const DEFAULT_FONT_SIZE As Single = 12
     Const DEFAULT_FIRST_LINE_INDENT_CM As Single = 1.41
-    Const DEFAULT_LINE_SPACING_MULTIPLE As Single = 1.8
+    Const DEFAULT_LINE_SPACING_MULTIPLE As Single = 1.6
 
     ' "기본 단락 스타일"은 Normal(기본) 스타일을 의미합니다.
     ' doc.Content.ParagraphFormat에 들여쓰기를 주면 제목 스타일에도 직접 서식으로
