@@ -49,12 +49,10 @@ GetNearestHeadingTitleLazy = FormatHeadingTitle( _
   - 예: `Call FooBar()` (지향)
   - 예: `Call FooBar arg1, arg2` (지양)
   - 예: `Call FooBar (arg1, arg2)` (지향)
-  - 예: `FooBar arg1, arg2` (지양)  
-  - 예: `result = FooBar(arg1, arg2)` (지향)
-
-### 4. 상수 선언
-- **상수 선언 우선**: 함수/서브 내에서 변경되지 않는 값은 
-  상수로 선언한다.
+- **부작용 방지**: '인자 변경(side effect)이 생기는 호출'을 
+  피하고 '반환값으로 재할당'하는 패턴을 사용한다.
+  - 예: `Call FooBar(FooBarWillModifyMe)` (지양)
+  - 예: `FooBarWillModifyMe = FooBar(FooBarWillModifyMe)` (지향)
 
 ### 4. 이름 짓기
 - **가독성 우선**: 변수, 함수, 모듈 이름은 역할이 바로
@@ -93,10 +91,23 @@ GetNearestHeadingTitleLazy = FormatHeadingTitle( _
   - 예: `Dim a As Long, b As Long` (지양)  
   - 예: `Dim a As Long` / `Dim b As Long` (지향)
 
+### 8. 성능 최적화 규칙 (VBA)
+- **병목 우선순위**: 최적화를 위해 COM 호출/서식 적용/Find 
+  반복을 가능한 최소화하고, 병목 지점을 찾아 최적화한다.
+- **Selection 사용 지양**: `Selection` 기반 조작은 느리고 
+  취약하다. `Range` 기반으로 처리한다.
+- **루프 안 COM 호출 최소화**: 루프 내부에서 `.Paragraphs(i)`, 
+  `.Range`, `.Text`, `.Style`, `.Shading` 같은 접근을 
+  반복하지 말고, 필요한 값은 캐싱한다.
+- **화면/이벤트/계산 제어**: 대량 처리 전에 `Application.ScreenUpdating` 등 
+  관련 옵션을 적절히 끄고, 처리 후 반드시 원복한다.
+- **문자열 처리 전략**: `doc.Content.Text` 같은 대용량 문자열 
+  획득은 1회로 제한하고, 매치 인덱스(Offset) 기반으로 `Range`를 
+  생성해 처리한다.
+- **정규식/Find 반복 최소화**: 동일 패턴을 반복 실행해야 한다면, 
+  패턴/옵션은 `Const`로 묶고, 실행 횟수 자체를 줄이는 구조를 우선한다.
+- **Const 적극 활용**: 함수 내에서 변하지 않는 값(패턴 문자열, 색상 Long 값 등)은
+  `Const`로 선언한다. 단, `RGB()` 같은 함수 호출 결과는 `Const`로 둘 수 없다.
+
 ## 적용 범위
 - `myVba` 디렉터리 이하의 모든 VBA 코드에 적용한다.
-
-## 참고 문서
-
-- 자세한 내용은 프로젝트 루트의 `CODING_RULES.md` 파일을
-  참고한다.

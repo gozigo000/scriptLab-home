@@ -16,8 +16,6 @@ Option Explicit
 ' 도 #a 하이퍼링크 (도 1, 도 11 구분 주의)
 ' 도면들 들여쓰기 제거
 ' 볼드체 문단 -> 제목 2 & 들여쓰기 유지 & 위에 한 줄 추가
-' 영어(대/소문자), 숫자 색칠
-' 도 #a 배경 색칠
 ' 상용구 배경 어둡게 색칠: 완전 일치 => 어둡게  /  부분 일치 => 덜 어둡게
 ' 
 ' CreateHyperlinksToSelection 함수가 Range 인수를 받도록 수정
@@ -59,15 +57,17 @@ Public Sub formatKipoSpec()
     Call SetNormalStyleDefaults(doc)
     Call SetDocumentParagraphDefaults(doc)
     Call SetHeadingStyles(doc)
-    Call ResetDirectFormattingAndReapplyStyles(doc)
+    Call EraseDirectFormatting(doc)
 
     Call InsertBlankLinesForKipoSections(doc)
     Call InsertBlankLinesBetweenClaimHeadings(doc)
     Call InsertBlankLinesBeforeFigureHeadings(doc)
+    
     Call ApplyHeadingStyles(doc)
     Call AdjustClaimHeadingLevels(doc)
 
-    Call ColorizeEnglishLettersAndDigits(doc)
+    Call ColorizeText(doc)
+    Call ShadeText(doc)
 
 
     Call ShowNavigationPane()
@@ -85,11 +85,52 @@ End Sub
 ' - 대문자: 진한 파랑
 ' - 소문자: 진한 초록
 ' - 숫자: 진한 빨강
-Private Sub ColorizeEnglishLettersAndDigits(ByVal doc As Document)
+Private Sub ColorizeText(ByVal doc As Document)
     On Error GoTo SafeExit
     ' Call ApplyColorByWildcard(doc, "[a-zA-Z_]@", RGB(237, 125, 49), True)
     ' Call ApplyColorByWildcard(doc, "[a-z]@", RGB(0, 153, 74), True)
     ' Call ApplyColorByWildcard(doc, "[0-9]@", RGB(204, 0, 0), False)
+SafeExit:
+End Sub
+
+' 문서 전체에서 "도 1", "도2" 같은 도면 참조 토큰의 배경색을 지정합니다.
+' - 요청 배경색: RGB(255,242,204)
+Private Sub ShadeText(ByVal doc As Document)
+    On Error GoTo SafeExit
+
+    Dim figureBgColor As Long
+    figureBgColor = RGB(255, 242, 204)
+
+    Dim contentRng As Range
+    Set contentRng = doc.Content
+
+    Dim s As String
+    s = contentRng.Text
+
+    Dim matches As Object
+    Set matches = GetRegexMatchesAll(s, "(도|표|수학식)\s*\d+[a-zA-Z]?")
+    If matches Is Nothing Then GoTo SafeExit
+
+    Dim m As Object
+    For Each m In matches
+        Dim startIdx As Long
+        Dim tokenLen As Long
+        startIdx = CLng(m.FirstIndex) ' 0-based
+        tokenLen = Len(CStr(m.Value))
+        If (startIdx >= 1 And _
+            IsDelimiterChar(Mid$(s, startIdx, 1)) _
+        ) Then
+            Dim hit As Range
+            Set hit = doc.Range( _
+                contentRng.Start + startIdx, _
+                contentRng.Start + startIdx + tokenLen _
+            )
+
+            hit.Shading.Texture = wdTextureNone
+            hit.Shading.BackgroundPatternColor = figureBgColor
+        End If
+    Next m
+
 SafeExit:
 End Sub
 
@@ -241,7 +282,7 @@ End Sub
 
 ' 문서 전체에서 "직접 서식"을 제거하고, 각 문단이 가진 스타일 서식을 다시 적용합니다.
 ' - 본문 폰트가 Normal 변경을 따라오지 않는 경우(직접 서식 잔존) 해결용
-Private Sub ResetDirectFormattingAndReapplyStyles(ByVal doc As Document)
+Private Sub EraseDirectFormatting(ByVal doc As Document)
     On Error GoTo SafeExit
 
     Dim rng As Range
@@ -403,7 +444,7 @@ Private Sub EnsureOneBlankParagraphBefore(ByVal doc As Document, ByVal para As P
 
     If IsFirstParagraph(doc, para) Then
         Dim startIp As Range
-        Set startIp = doc.Range(Start:=0, End:=0)
+        Set startIp = doc.Range(0, 0)
         startIp.InsertBefore vbCr
         Exit Sub
     End If
@@ -415,7 +456,7 @@ Private Sub EnsureOneBlankParagraphBefore(ByVal doc As Document, ByVal para As P
     If TextHasOnlyWhitespace(prevPara.Range.Text) Then Exit Sub
 
     Dim ip As Range
-    Set ip = doc.Range(Start:=para.Range.Start, End:=para.Range.Start)
+    Set ip = doc.Range(para.Range.Start, para.Range.Start)
     ip.InsertBefore vbCr
 
 SafeExit:
@@ -434,7 +475,7 @@ Private Function GetPreviousParagraph(ByVal doc As Document, ByVal para As Parag
     If para.Range.Start <= 0 Then GoTo SafeExit
 
     Dim r As Range
-    Set r = doc.Range(Start:=para.Range.Start - 1, End:=para.Range.Start - 1)
+    Set r = doc.Range(para.Range.Start - 1, para.Range.Start - 1)
     Set GetPreviousParagraph = r.Paragraphs(1)
     Exit Function
 
@@ -570,7 +611,7 @@ Private Sub UpdateClaimHeadingLevel( _
     If endPos < startPos Then Exit Sub
 
     Dim paraRng As Range
-    Set paraRng = doc.Range(Start:=startPos, End:=endPos)
+    Set paraRng = doc.Range(startPos, endPos)
 
     Dim upperClaimNo As Long
     upperClaimNo = FindSmallestClaimReferenceNo(paraRng)

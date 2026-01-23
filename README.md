@@ -9,7 +9,7 @@
 
 2) `distor/ImportMyVbaToNormal.bas`의 `rootDir`를 자기 PC 경로로 수정하세요.
 ```vba
-Private Const rootDir As String = "자기 PC의 scriptLab-home 폴더 경로"
+Private Const rootDir As String = "자기/PC의/경로/scriptLab-home"
 ```
 
 3) `ImportMyVbaToNormal` 매크로를 실행하세요.

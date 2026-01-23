@@ -18,7 +18,10 @@ Option Explicit
 ' - 문자열이 정규식 패턴에 매칭되면 True 반환
 ' - 문자열이 정규식 패턴에 매칭되지 않으면 False 반환
 '
-Public Function TestRegex(ByVal str As String, ByVal pattern As String) As Boolean
+Public Function TestRegex( _
+    ByVal str As String, _
+    ByVal pattern As String _
+) As Boolean
     On Error GoTo ReturnFalse
     
     str = Trim$(str)
@@ -36,4 +39,29 @@ Public Function TestRegex(ByVal str As String, ByVal pattern As String) As Boole
     
 ReturnFalse:
     TestRegex = False
+End Function
+
+' 문자열과 패턴을 받아 정규식 매치를 실행하고 MatchCollection(Object)을 반환합니다.
+' - VBScript.RegExp는 lookahead/lookbehind 미지원
+' - 실패 시 Nothing 반환
+Public Function GetRegexMatchesAll( _
+    ByVal str As String, _
+    ByVal pattern As String _
+) As Object
+    On Error GoTo ReturnNothing
+
+    If Len(str) = 0 Then GoTo ReturnNothing
+    If Len(pattern) = 0 Then GoTo ReturnNothing
+
+    Dim re As Object
+    Set re = CreateObject("VBScript.RegExp")
+    re.Global = True
+    re.IgnoreCase = False
+    re.Pattern = pattern
+
+    Set GetRegexMatchesAll = re.Execute(str)
+    Exit Function
+
+ReturnNothing:
+    Set GetRegexMatchesAll = Nothing
 End Function
