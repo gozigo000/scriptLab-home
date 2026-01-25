@@ -202,9 +202,9 @@ Public Sub CreateHyperlinksToRange(ByVal sourceRange As Range)
                 hyperlinkRange.Shading.ForegroundPatternColor = originalFormatRange.Shading.ForegroundPatternColor
                 
                 ' 스타일 복원 (하이퍼링크 스타일이 적용되지 않도록)
-                ' On Error Resume Next
-                ' hyperlinkRange.Style = originalFormatRange.Style
-                ' On Error GoTo ErrorHandler
+                On Error Resume Next
+                hyperlinkRange.Style = originalFormatRange.Style
+                On Error GoTo ErrorHandler
                 
                 ' 하이퍼링크 범위 정리
                 Set hyperlinkRange = Nothing

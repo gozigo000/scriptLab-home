@@ -12,6 +12,8 @@ Option Explicit
 ' TODO:
 ' 
 ' [KIPO포매터]
+' 저장할 때 자동으로 필드 업데이트하기
+' 독립항들은 배경색 칠하기
 ' 청구범위 청구항 하이퍼링크
 ' 도 #a 하이퍼링크 (도 1, 도 11 구분 주의)
 ' 도면들 들여쓰기 제거
@@ -49,6 +51,10 @@ Option Explicit
 Public Sub formatKipoSpec()
     On Error GoTo ErrorHandler
     Call BeginCustomUndoRecord("formatKipoSpec")
+    
+    Dim prevScreenUpdating As Boolean
+    prevScreenUpdating = Application.ScreenUpdating
+    Application.ScreenUpdating = False
 
     Dim doc As Document
     Set doc = ActiveDocument
@@ -69,7 +75,6 @@ Public Sub formatKipoSpec()
     Call ColorizeText(doc)
     Call ShadeText(doc)
 
-
     Call ShowNavigationPane()
     GoTo SafeExit
 
@@ -78,6 +83,9 @@ ErrorHandler:
     GoTo SafeExit
 
 SafeExit:
+    On Error Resume Next
+    Application.ScreenUpdating = prevScreenUpdating
+    On Error GoTo 0
     Call EndCustomUndoRecord()
 End Sub
 
