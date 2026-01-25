@@ -6,8 +6,6 @@
 ' 1. 프로젝트 탐색기에서 "ThisDocument" 더블 클릭
 ' 2. 아래 코드를 붙여넣기
 
-Dim myAppEvents As clsAppEvents
-
 Private Sub Document_Open()
     ' currWordHighlighter 초기화
     Call InitializeCurrWordHighlighter
@@ -25,9 +23,7 @@ Private Sub Document_Open()
     Call RegisterHotkey("ToggleCursorMoveTracking", BuildKeyCode(wdKeyAlt, wdKeyR))
     
     ' 클래스 인스턴스 생성 및 Application 객체 연결
-    ' 이 클래스는 WindowSelectionChange 이벤트를 처리합니다.
-    Set myAppEvents = New clsAppEvents
-    Set myAppEvents.appWord = Word.Application
+    Call EnsureAppEvents()
 End Sub
 
 

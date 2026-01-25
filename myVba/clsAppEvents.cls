@@ -89,3 +89,55 @@ SafeExit:
     sIsHandling = False
 End Sub
 
+Private Sub appWord_DocumentBeforeSave( _
+    ByVal Doc As Document, _
+    ByRef SaveAsUI As Boolean, _
+    ByRef Cancel As Boolean _
+)
+    On Error GoTo SafeExit
+
+    Static sIsHandling As Boolean
+    If sIsHandling Then Exit Sub
+
+    sIsHandling = True
+
+    Dim prevScreenUpdating As Boolean
+    prevScreenUpdating = Application.ScreenUpdating
+    Application.ScreenUpdating = False
+    On Error GoTo SafeExit
+
+    ' 모든 필드 업데이트
+    Call UpdateAllFieldsInDocument(Doc)
+
+SafeExit:
+    Application.ScreenUpdating = prevScreenUpdating
+    sIsHandling = False
+End Sub
+
+Private Sub UpdateAllFieldsInDocument(ByVal doc As Word.Document)
+    On Error GoTo SafeExit
+
+    Dim story As Word.Range
+    For Each story In doc.StoryRanges
+        Call UpdateFieldsInStory(story)
+    Next story
+
+SafeExit:
+End Sub
+
+Private Sub UpdateFieldsInStory(ByVal rng As Word.Range)
+    On Error GoTo SafeExit
+
+    Dim cur As Word.Range
+    Set cur = rng
+
+    Do While Not cur Is Nothing
+        On Error Resume Next
+        cur.Fields.Update
+        On Error GoTo SafeExit
+        Set cur = cur.NextStoryRange
+    Loop
+
+SafeExit:
+End Sub
+

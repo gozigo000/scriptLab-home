@@ -72,8 +72,13 @@ Public Sub formatKipoSpec()
     Call ApplyHeadingStyles(doc)
     Call AdjustClaimHeadingLevels(doc)
 
-    Call ColorizeText(doc)
-    Call ShadeText(doc)
+    ' TODO: AddClaimAndFigureReferenceHyperlinks 
+    ' 함수 아래에 두면 이상한 곳에 색칠하는 문제가 발생함.
+    ' Call ColorizeText(doc)
+    ' Call ShadeText(doc)
+
+    Call AddClaimAndFigureReferenceHyperlinks(doc)
+
 
     Call ShowNavigationPane()
     GoTo SafeExit
@@ -95,9 +100,9 @@ End Sub
 ' - 숫자: 진한 빨강
 Private Sub ColorizeText(ByVal doc As Document)
     On Error GoTo SafeExit
-    ' Call ApplyColorByWildcard(doc, "[a-zA-Z_]@", RGB(237, 125, 49), True)
-    ' Call ApplyColorByWildcard(doc, "[a-z]@", RGB(0, 153, 74), True)
-    ' Call ApplyColorByWildcard(doc, "[0-9]@", RGB(204, 0, 0), False)
+    Call ApplyColorByWildcard(doc, "[a-zA-Z_]@", RGB(237, 125, 49), True)
+    Call ApplyColorByWildcard(doc, "[a-z]@", RGB(0, 153, 74), True)
+    Call ApplyColorByWildcard(doc, "[0-9]@", RGB(204, 0, 0), False)
 SafeExit:
 End Sub
 
@@ -191,18 +196,36 @@ End Sub
 Private Sub SetNormalStyleDefaults(ByVal doc As Document)
     On Error GoTo SafeExit
 
-    Const DEFAULT_FONT_SIZE As Single = 12
-    Const DEFAULT_FIRST_LINE_INDENT_CM As Single = 1.41
-    Const DEFAULT_LINE_SPACING_MULTIPLE As Single = 1.6
+    Const DEFAULT_FONT_SIZE As Single = 12 ' 폰트 사이즈
+    Const DEFAULT_FIRST_LINE_INDENT_CM As Single = 1.41 ' 첫 줄 들여쓰기
+    Const DEFAULT_LINE_SPACING_MULTIPLE As Single = 2 ' 줄간격
 
     ' "기본 단락 스타일"은 Normal(기본) 스타일을 의미합니다.
     ' doc.Content.ParagraphFormat에 들여쓰기를 주면 제목 스타일에도 직접 서식으로
     ' 적용될 수 있어, Normal 스타일에만 들여쓰기/폰트 크기를 적용합니다.
+    ' 폰트가 설치되어 있지 않거나 이름이 환경별로 달라 에러가 날 수 있음.
     With doc.Styles(wdStyleNormal).Font
-        .NameFarEast = "맑은 고딕"
-        .NameAscii = "Times New Roman"
-        .NameOther = "Times New Roman"
+        On Error Resume Next
+        .NameFarEast = "KoPub바탕체 Medium"
+        If Err.Number <> 0 Then
+            Err.Clear
+            .NameFarEast = "맑은 고딕"
+        End If
+        
+        .NameAscii = "KoPub바탕체 Medium"
+        If Err.Number <> 0 Then
+            Err.Clear
+            .NameAscii = "Times New Roman"
+        End If
+        
+        .NameOther = "KoPub바탕체 Medium"
+        If Err.Number <> 0 Then
+            Err.Clear
+            .NameOther = "Times New Roman"
+        End If
+        
         .Size = DEFAULT_FONT_SIZE
+        On Error GoTo SafeExit
     End With
 
     With doc.Styles(wdStyleNormal).ParagraphFormat
