@@ -85,8 +85,19 @@ Private Sub appWord_WindowSelectionChange(ByVal Sel As Selection)
         Debug.Print "WindowSelectionChange: TrackCursorMove = " & Format$(dt, "0.0") & "ms"
     End If
 
+    ' (MARK) 자동 저장(디바운스)
+    Call MaybeScheduleAutoSave(Sel.Range.Document)
+
 SafeExit:
     sIsHandling = False
+End Sub
+
+Private Sub appWord_DocumentBeforeClose(ByVal Doc As Document, ByRef Cancel As Boolean)
+    On Error GoTo SafeExit
+
+    Call CancelAutoSave(Doc)
+
+SafeExit:
 End Sub
 
 Private Sub appWord_DocumentBeforeSave( _
