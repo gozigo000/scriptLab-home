@@ -9,42 +9,25 @@
 Private Sub Document_Open()
     ' currWordHighlighter 초기화
     Call InitializeCurrWordHighlighter
-    ' currWordHighlighter 토글 단축키 등록 (Alt+W)
-    Call RegisterHotkey("ToggleCurrWordHighlighter", BuildKeyCode(wdKeyAlt, wdKeyW))
+    ' currWordHighlighter 토글 단축키 등록
+    Call RegisterHotkey("ToggleCurrWordHighlighter", wdKeyAlt, wdKeyW)
     
     ' bracketMatcher 초기화
     Call InitializeBracketMatcher
-    ' bracketMatcher 토글 단축키 등록 (Alt+B)
-    Call RegisterHotkey("ToggleBracketMatcher", BuildKeyCode(wdKeyAlt, wdKeyB))
+    ' bracketMatcher 토글 단축키 등록
+    Call RegisterHotkey("ToggleBracketMatcher", wdKeyAlt, wdKeyB)
     
     ' cursorMoveTracker 초기화
     Call InitializeCursorMoveTracking
-    ' cursorMoveTracker 토글 단축키 등록 (Alt+R)
-    Call RegisterHotkey("ToggleCursorMoveTracking", BuildKeyCode(wdKeyAlt, wdKeyR))
+    ' cursorMoveTracker 토글 단축키 등록
+    Call RegisterHotkey("ToggleCursorMoveTracking", wdKeyAlt, wdKeyR)
+
+    ' 현재 문단 잘라내기
+    Call RegisterHotkey("CutCurrentParagraphOrSelection", wdKeyControl, wdKeyX)
+
+    ' 현재 문단 복사하기
+    Call RegisterHotkey("CopyCurrentParagraphOrSelection", wdKeyControl, wdKeyC)
     
     ' 클래스 인스턴스 생성 및 Application 객체 연결
     Call EnsureAppEvents()
-End Sub
-
-
-' 단축키 등록 함수
-' - Command: 실행할 매크로 이름(문자열)
-' - KeyCode: BuildKeyCode(wdKeyAlt, wdKeyB) 같은 값
-Private Sub RegisterHotkey(ByVal Command As String, ByVal KeyCode As Long)
-    On Error GoTo SafeExit
-    
-    ' 매크로가 들어있는 템플릿에 키 바인딩을 저장 (문서별로 관리하기 쉬움)
-    Application.CustomizationContext = ActiveDocument.AttachedTemplate
-    
-    Dim kb As KeyBinding
-    Set kb = Application.FindKey(KeyCode)
-    If Not kb Is Nothing Then
-        kb.Clear
-    End If
-    
-    Application.KeyBindings.Add KeyCategory:=wdKeyCategoryMacro, _
-                                Command:=Command, _
-                                KeyCode:=KeyCode
-    
-SafeExit:
 End Sub
