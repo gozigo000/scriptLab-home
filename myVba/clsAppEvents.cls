@@ -97,6 +97,10 @@ Private Sub appWord_DocumentBeforeClose(ByVal Doc As Document, ByRef Cancel As B
 
     Call CancelAutoSave(Doc)
 
+    ' 하이퍼링크 이동(Alt+→)에서 남긴 북마크 정리
+    Call ClearNavBackStack(Doc)
+    Call ClearNavForwardStack(Doc)
+
 SafeExit:
 End Sub
 

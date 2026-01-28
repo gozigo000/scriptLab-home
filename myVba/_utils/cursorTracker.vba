@@ -229,7 +229,7 @@ End Sub
 
 ' 초기화
 Public Sub InitializeCursorMoveTracking()
-    gIsCursorMoveTrackingEnabled = True
+    gIsCursorMoveTrackingEnabled = False
     Call EnsurePrevCurrDict()
 End Sub
 
