@@ -35,6 +35,9 @@ Private Sub appWord_WindowSelectionChange(ByVal Sel As Selection)
 
     If sIsHandling Then Exit Sub
 
+    ' 자동저장: 커서 활동(이동/타이핑) 기록 (초기 return 케이스도 포함)
+    Call NotifyCursorActivity(Sel)
+
     ' 텍스트 드래그 선택은 heavy 기능들에 불리하니 스킵(각 모듈에서도 체크하지만 여기서 1차 차단)
     If Sel.Range.Start <> Sel.Range.End Then Exit Sub
 
