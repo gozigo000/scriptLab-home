@@ -22,6 +22,9 @@ Private Sub Document_Open()
     ' cursorMoveTracker 토글 단축키 등록
     Call RegisterHotkey("ToggleCursorMoveTracking", wdKeyAlt, wdKeyR)
 
+    ' autoSave 토글 단축키 등록 (기본값: OFF)
+    Call RegisterHotkey("ToggleAutoSave", wdKeyAlt, wdKeyS)
+
     ' 현재 문단 잘라내기
     Call RegisterHotkey("CutCurrentParagraphOrSelection", wdKeyControl, wdKeyX)
 

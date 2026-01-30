@@ -17,6 +17,8 @@ Option Explicit
 ' Public API:
 ' - MaybeScheduleAutoSave(doc, debounceMs)
 ' - CancelAutoSave([doc])
+' - ToggleAutoSave()
+' - IsAutoSaveEnabled()
 
 Private Const DEFAULT_DEBOUNCE_MS As Long = 5000 ' 5초
 Private Const CURSOR_IDLE_REQUIRED_SEC As Double = 0.5 ' 0.5초
@@ -102,6 +104,33 @@ Private gIsAutoSaving As Boolean
 Private gLastCursorDocName As String
 Private gLastCursorTick As Double
 
+' 자동저장 활성화 여부 (기본값: False)
+Private gAutoSaveEnabled As Boolean
+
+' 자동저장을 토글합니다.
+' - Alt+S 등에 매핑해서 사용합니다.
+Public Sub ToggleAutoSave()
+    On Error GoTo SafeExit
+
+    gAutoSaveEnabled = Not gAutoSaveEnabled
+
+    If Not gAutoSaveEnabled Then
+        Call CancelAutoSave()
+    Else
+        On Error Resume Next
+        Call MaybeScheduleAutoSave(Application.ActiveDocument)
+        On Error GoTo SafeExit
+    End If
+
+    Application.StatusBar = "AutoSave: " & IIf(gAutoSaveEnabled, "ON", "OFF")
+
+SafeExit:
+End Sub
+
+Public Function IsAutoSaveEnabled() As Boolean
+    IsAutoSaveEnabled = gAutoSaveEnabled
+End Function
+
 Public Sub NotifyCursorActivity(ByVal Sel As Word.Selection)
     On Error GoTo SafeExit
 
@@ -124,6 +153,11 @@ Public Sub MaybeScheduleAutoSave( _
     On Error GoTo SafeExit
 
     If doc Is Nothing Then Exit Sub
+
+    If Not gAutoSaveEnabled Then
+        Call CancelAutoSave(doc)
+        Exit Sub
+    End If
 
     ' IME(한글 조합) 중에는 자동저장 예약 자체를 하지 않음
     If IsImeComposing() Then
@@ -190,6 +224,12 @@ End Sub
 
 Private Sub DoAutoSaveNow()
     On Error GoTo SafeExit
+
+    If Not gAutoSaveEnabled Then
+        Call CancelTimer()
+        Set gTargetDoc = Nothing
+        GoTo SafeExit
+    End If
 
     If gIsAutoSaving Then Exit Sub
     gIsAutoSaving = True
