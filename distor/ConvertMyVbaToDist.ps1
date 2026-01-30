@@ -90,24 +90,24 @@ if (-not (Test-Path -LiteralPath $SourceDir)) {
 
 $sourceFull = (Resolve-Path -LiteralPath $SourceDir).Path.TrimEnd("\")
 
-$vbaFiles = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Filter "*.vba"
+$vbsFiles = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Filter "*.vbs"
 $clsFiles = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Filter "*.cls"
 $frmFiles = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Filter "*.frm"
 
-if (($vbaFiles.Count + $clsFiles.Count + $frmFiles.Count) -eq 0) {
-  Write-Host "No .vba/.cls files found under $SourceDir"
+if (($vbsFiles.Count + $clsFiles.Count + $frmFiles.Count) -eq 0) {
+  Write-Host "No .vbs/.cls/.frm files found under $SourceDir"
   exit 0
 }
 
 if ($InPlace) {
-  foreach ($f in $vbaFiles) {
+  foreach ($f in $vbsFiles) {
     $newPath = [System.IO.Path]::ChangeExtension($f.FullName, ".bas")
     if (Test-Path -LiteralPath $newPath) {
       Remove-Item -LiteralPath $newPath -Force
     }
     Rename-Item -LiteralPath $f.FullName -NewName ([System.IO.Path]::GetFileName($newPath))
   }
-  Write-Host "Renamed $($vbaFiles.Count) files: .vba -> .bas (in place)."
+  Write-Host "Renamed $($vbsFiles.Count) files: .vbs -> .bas (in place)."
   exit 0
 }
 
@@ -129,7 +129,7 @@ Ensure-Dir $outModules
 Ensure-Dir $outClassModules
 Ensure-Dir $outForms
 
-foreach ($f in $vbaFiles) {
+foreach ($f in $vbsFiles) {
   $moduleName = Get-ModuleNameFromFileName $f.FullName
 
   $targetDir = if ($moduleName -ieq "ThisDocument") { $outMsWordObjects } else { $outModules }
@@ -148,8 +148,13 @@ foreach ($f in $vbaFiles) {
 
   # Normalize line endings to CRLF (VBA export convention).
   $content = $content -replace "`r?`n", "`r`n"
-  # Save using system ANSI for VBA IDE import compatibility.
-  [System.IO.File]::WriteAllText($targetPath, $content, [System.Text.Encoding]::Default)
+  if ($moduleName -ieq "ThisDocument") {
+    # ReadAllText(utf-8) used by ImportMyVbaToNormal.bas should not garble non-ASCII.
+    [System.IO.File]::WriteAllText($targetPath, $content, [System.Text.Encoding]::UTF8)
+  } else {
+    # Save using system ANSI for VBA IDE import compatibility.
+    [System.IO.File]::WriteAllText($targetPath, $content, [System.Text.Encoding]::Default)
+  }
 }
 
 foreach ($f in $clsFiles) {
@@ -166,7 +171,11 @@ foreach ($f in $clsFiles) {
   }
 
   $content = $content -replace "`r?`n", "`r`n"
-  [System.IO.File]::WriteAllText($targetPath, $content, [System.Text.Encoding]::Default)
+  if ($className -ieq "ThisDocument") {
+    [System.IO.File]::WriteAllText($targetPath, $content, [System.Text.Encoding]::UTF8)
+  } else {
+    [System.IO.File]::WriteAllText($targetPath, $content, [System.Text.Encoding]::Default)
+  }
 }
 
 foreach ($f in $frmFiles) {
@@ -190,5 +199,5 @@ $classModuleCount = ($clsFiles | Where-Object { (Get-ModuleNameFromFileName $_.F
 
 Write-Host ("Generated {0} MsWord object file into: {1}" -f $msWordCount, $outMsWordObjects)
 Write-Host ("Generated {0} .frm into: {1}" -f $frmFiles.Count, $outForms)
-Write-Host ("Generated {0} .bas into: {1}" -f $vbaFiles.Count, $outModules)
+Write-Host ("Generated {0} .bas into: {1}" -f $vbsFiles.Count, $outModules)
 Write-Host ("Generated {0} .cls into: {1}" -f $classModuleCount, $outClassModules)
