@@ -32,10 +32,10 @@ Private Sub Document_Open()
     Call RegisterHotkey("CopyCurrentParagraphOrSelection", wdKeyControl, wdKeyC)
     
     ' Alt+→: 하이퍼링크면 목적지로 이동, 없으면 기본 앞으로 이동
-    Call RegisterHotkey("FollowHyperlinkOrGoForwardPos", wdKeyAlt, vbKeyRight)
+    Call RegisterHotkey("NavigateForward", wdKeyAlt, vbKeyRight)
     
     ' Alt+←: 하이퍼링크 이동 스택이 있으면 복귀
-    Call RegisterHotkey("GoBackwardPos", wdKeyAlt, vbKeyLeft)
+    Call RegisterHotkey("NavigateBackward", wdKeyAlt, vbKeyLeft)
     
     ' 클래스 인스턴스 생성 및 Application 객체 연결
     Call EnsureAppEvents()
