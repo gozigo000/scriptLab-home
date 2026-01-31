@@ -27,7 +27,7 @@ Option Explicit
 ' - Paragraph.OutlineLevel <> wdOutlineLevelBodyText
 '
 ' 사용 예:
-' - title = GetCurrentHeadingTitle(Selection.Range, 140)
+' - title = GetCurrentHeadingTitle(Selection.Range)
 ' - Call DeleteOutlineCache() ' 필요 시 강제 갱신/초기화
 
 ' ===== Lazy 캐시 저장소(모듈 레벨) =====
@@ -68,14 +68,12 @@ Private Const OUTLINE_XML_VERSION As String = "1"
 ' 현재 커서가 속한 문단에서 위쪽으로 가장 가까운
 ' "제목(탐색창에 표시되는 개요 수준)"을 찾아 반환
 ' - rng: 현재 커서가 속한 문단의 Range
-' - maxLen: 반환 문자열의 최대 길이
 ' - 반환값: "제목" (또는 "1.2.3 제목" 처럼 목록번호가 있으면 포함)
 ' 하위호환용 이름: 내부적으로 lazy 캐시 사용
 Public Function GetCurrentHeadingTitle( _
-    ByVal rng As Range, _
-    Optional ByVal maxLen As Long = 140 _
+    ByVal rng As Range _
 ) As String
-    GetCurrentHeadingTitle = GetCurrentHeadingTitleLazy(rng, maxLen)
+    GetCurrentHeadingTitle = GetCurrentHeadingTitleLazy(rng)
 End Function
 
 ' 현재 커서가 속한 문단의 "제목 레벨(OutlineLevel)"을 반환
@@ -118,7 +116,7 @@ Public Sub a_ShowOutlineHeadingInfo()
     End If
     
     Dim headingTitle As String
-    headingTitle = GetCurrentHeadingTitle(selRng, 200)
+    headingTitle = GetCurrentHeadingTitle(selRng)
     
     Dim headingLevel As Long
     headingLevel = GetCurrentHeadingLevel(selRng)
@@ -156,8 +154,7 @@ End Sub
 
 ' Lazy 방식: rng 위치에서 요청한 경우에만 제목/경계를 갱신합니다.
 Private Function GetCurrentHeadingTitleLazy( _
-    ByVal rng As Range, _
-    Optional ByVal maxLen As Long = 140 _
+    ByVal rng As Range _
 ) As String
     On Error GoTo SafeExit
     
@@ -180,10 +177,7 @@ Private Function GetCurrentHeadingTitleLazy( _
     If gLastIdx > 0 And gLastIdx <= gSecCount Then
         If pos >= gSecStart(gLastIdx) _
             And pos <= gSecEnd(gLastIdx) Then
-            GetCurrentHeadingTitleLazy = FormatHeadingTitle( _
-                gSecTitle(gLastIdx), _
-                maxLen _
-            )
+            GetCurrentHeadingTitleLazy = gSecTitle(gLastIdx)
             TouchRamCacheEntry gDocKey, gFingerprint
             Exit Function
         End If
@@ -194,10 +188,7 @@ Private Function GetCurrentHeadingTitleLazy( _
     idx = FindCachedSectionIndex(pos)
     If idx > 0 Then
         gLastIdx = idx
-        GetCurrentHeadingTitleLazy = FormatHeadingTitle( _
-            gSecTitle(idx), _
-            maxLen _
-        )
+        GetCurrentHeadingTitleLazy = gSecTitle(idx)
         TouchRamCacheEntry gDocKey, gFingerprint
         Exit Function
     End If
@@ -216,9 +207,7 @@ Private Function GetCurrentHeadingTitleLazy( _
             headingLevel, headingTitle _
         )
         gLastIdx = idx
-        GetCurrentHeadingTitleLazy = FormatHeadingTitle( _
-            headingTitle, maxLen _
-        )
+        GetCurrentHeadingTitleLazy = headingTitle
         ' 캐시가 늘어났으면 문서에 저장
         ' (초기 전체 스캔이 없어서 빈도는 낮은 편)
         Call SaveCacheToDocument(doc)
@@ -1199,20 +1188,6 @@ Private Function EscapeXmlText(ByVal s As String) As String
     s = Replace(s, "<", "&lt;")
     s = Replace(s, ">", "&gt;")
     EscapeXmlText = s
-End Function
-
-Private Function FormatHeadingTitle( _
-    ByVal title As String, _
-    ByVal maxLen As Long _
-) As String
-    Dim t As String
-    t = title
-    If maxLen > 0 And Len(t) > maxLen Then t = Left$(t, maxLen) & "…"
-    If t = "" Then
-        FormatHeadingTitle = ""
-    Else
-        FormatHeadingTitle = t
-    End If
 End Function
 
 ' 문서 구분용 key

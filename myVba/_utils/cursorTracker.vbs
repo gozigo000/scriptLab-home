@@ -192,7 +192,7 @@ Public Sub a_ShowCursorLocationInfo()
     
     ' ===== 영역 제목(탐색창:목차에 보이는 제목) =====
     Dim headingTitle As String
-    headingTitle = GetCurrentHeadingTitle(selRng, 200)
+    headingTitle = GetCurrentHeadingTitle(selRng)
     
     ' ===== 문단 =====
     Dim paraText As String
