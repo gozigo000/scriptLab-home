@@ -401,7 +401,11 @@ Public Sub DeleteOutlineCache(Optional ByVal doc As Document)
     fp = MakeFingerprint(target)
     
     ' 1) 문서 내 저장된 캐시(CustomXMLParts) 삭제
-    DeleteExistingOutlineParts target
+    Call CustomXml_DeleteExistingParts( _
+        target, _
+        OUTLINE_XML_NS, _
+        OUTLINE_XML_ROOT_LOCAL _
+    )
     
     ' 2) RAM(LRU) 캐시에서 해당 문서만 제거
     RemoveRamCacheEntry key, fp
@@ -971,7 +975,11 @@ Private Sub SaveCacheToDocument(ByVal doc As Document)
     
     ' 저장할 내용이 없으면 기존 파트도 정리
     If gSecCount <= 0 Then
-        DeleteExistingOutlineParts doc
+        Call CustomXml_DeleteExistingParts( _
+            doc, _
+            OUTLINE_XML_NS, _
+            OUTLINE_XML_ROOT_LOCAL _
+        )
         Exit Sub
     End If
     
@@ -979,7 +987,11 @@ Private Sub SaveCacheToDocument(ByVal doc As Document)
     xml = BuildCacheXml(gDocKey, gFingerprint)
     
     ' 기존 파트 삭제 후 하나로 유지
-    DeleteExistingOutlineParts doc
+    Call CustomXml_DeleteExistingParts( _
+        doc, _
+        OUTLINE_XML_NS, _
+        OUTLINE_XML_ROOT_LOCAL _
+    )
     doc.CustomXMLParts.Add xml
     Exit Sub
     
@@ -997,7 +1009,11 @@ Private Function TryLoadCacheFromDocument( _
     On Error GoTo SafeExit
     
     Dim part As CustomXMLPart
-    Set part = FindOutlinePart(doc)
+    Set part = CustomXml_FindPart( _
+        doc, _
+        OUTLINE_XML_NS, _
+        OUTLINE_XML_ROOT_LOCAL _
+    )
     If part Is Nothing Then GoTo SafeExit
     
     Dim loadedFp As String
@@ -1016,59 +1032,6 @@ Private Function TryLoadCacheFromDocument( _
     
 SafeExit:
     TryLoadCacheFromDocument = False
-End Function
-
-' 기존 Outline 캐시 XML 파트들 삭제
-' (하나만 유지하기 위함)
-Private Sub DeleteExistingOutlineParts( _
-    ByVal doc As Document _
-)
-    On Error GoTo SafeExit
-    Dim parts As CustomXMLParts
-    Set parts = doc.CustomXMLParts.SelectByNamespace(OUTLINE_XML_NS)
-    If Not parts Is Nothing Then
-        Do While parts.Count > 0
-            parts(1).Delete
-        Loop
-        Exit Sub
-    End If
-SafeExit:
-    ' SelectByNamespace가 실패하는 환경이면 전체 순회로 삭제
-    On Error Resume Next
-    Dim p As CustomXMLPart
-    For Each p In doc.CustomXMLParts
-        If InStr(1, p.XML, OUTLINE_XML_NS, vbTextCompare) > 0 And _
-            InStr(1, p.XML, OUTLINE_XML_ROOT_LOCAL, vbTextCompare) > 0 _
-        Then
-            p.Delete
-        End If
-    Next p
-End Sub
-
-' 우리 캐시 파트 1개 찾기
-Private Function FindOutlinePart(ByVal doc As Document) As CustomXMLPart
-    On Error GoTo Fallback
-    Dim parts As CustomXMLParts
-    Set parts = doc.CustomXMLParts.SelectByNamespace(OUTLINE_XML_NS)
-    If Not parts Is Nothing Then
-        If parts.Count > 0 Then
-            Set FindOutlinePart = parts(1)
-            Exit Function
-        End If
-    End If
-    
-Fallback:
-    On Error Resume Next
-    Dim p As CustomXMLPart
-    For Each p In doc.CustomXMLParts
-        If InStr(1, p.XML, OUTLINE_XML_NS, vbTextCompare) > 0 And _
-            InStr(1, p.XML, OUTLINE_XML_ROOT_LOCAL, vbTextCompare) > 0 _
-        Then
-            Set FindOutlinePart = p
-            Exit Function
-        End If
-    Next p
-    Set FindOutlinePart = Nothing
 End Function
 
 ' XML 문자열 생성
@@ -1170,24 +1133,6 @@ Private Function ParseCacheXml( _
     
 SafeExit:
     ParseCacheXml = False
-End Function
-
-' XML attribute escape
-Private Function EscapeXmlAttr(ByVal s As String) As String
-    s = Replace(s, "&", "&amp;")
-    s = Replace(s, """", "&quot;")
-    s = Replace(s, "'", "&apos;")
-    s = Replace(s, "<", "&lt;")
-    s = Replace(s, ">", "&gt;")
-    EscapeXmlAttr = s
-End Function
-
-' XML text escape
-Private Function EscapeXmlText(ByVal s As String) As String
-    s = Replace(s, "&", "&amp;")
-    s = Replace(s, "<", "&lt;")
-    s = Replace(s, ">", "&gt;")
-    EscapeXmlText = s
 End Function
 
 ' 문서 구분용 key

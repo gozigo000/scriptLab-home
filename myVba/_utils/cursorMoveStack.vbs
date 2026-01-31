@@ -92,7 +92,11 @@ Public Sub CursorMoveStack_FlushToDocument(ByVal doc As Document, Optional ByVal
     If c.Count <= 0 Then Exit Sub
 
     ' 기존 저장본은 제거하고 새로 작성(중복/증식 방지)
-    Call DeleteExistingCursorHistoryParts(doc)
+    Call CustomXml_DeleteExistingParts( _
+        doc, _
+        CURSOR_XML_NS, _
+        CURSOR_XML_ROOT_LOCAL _
+    )
 
     Dim part As CustomXMLPart
     Set part = EnsureCursorHistoryPart(doc)
@@ -166,30 +170,6 @@ SafeExit:
     CursorMoveStack_TryGetLatestMoveInfoFromDocument = False
 End Function
 
-Private Function GetCustomXmlAttr(ByVal node As CustomXMLNode, ByVal attrName As String) As String
-    On Error GoTo SafeExit
-
-    If node Is Nothing Then GoTo SafeExit
-    If node.Attributes Is Nothing Then GoTo SafeExit
-
-    Dim a As CustomXMLNode
-    For Each a In node.Attributes
-        Dim bn As String
-        bn = ""
-        On Error Resume Next
-        bn = CStr(a.BaseName) ' Word CustomXMLNode는 NodeName이 없고 BaseName을 사용
-        On Error GoTo SafeExit
-
-        If LCase$(bn) = LCase$(attrName) Then
-            GetCustomXmlAttr = CStr(a.Text)
-            Exit Function
-        End If
-    Next a
-
-SafeExit:
-    GetCustomXmlAttr = ""
-End Function
-
 ' ----------------------
 ' CustomXMLParts: Create/Delete/Trim
 ' ----------------------
@@ -216,59 +196,29 @@ SafeExit:
 End Function
 
 Private Function FindCursorHistoryPart(ByVal doc As Document) As CustomXMLPart
-    On Error GoTo Fallback
-
-    Dim parts As CustomXMLParts
-    Set parts = doc.CustomXMLParts.SelectByNamespace(CURSOR_XML_NS)
-    If Not parts Is Nothing Then
-        If parts.Count > 0 Then
-            Set FindCursorHistoryPart = parts(1)
-            Exit Function
-        End If
-    End If
-
-Fallback:
-    On Error Resume Next
-    Dim p As CustomXMLPart
-    For Each p In doc.CustomXMLParts
-        If InStr(1, p.XML, CURSOR_XML_NS, vbTextCompare) > 0 And InStr(1, p.XML, CURSOR_XML_ROOT_LOCAL, vbTextCompare) > 0 Then
-            Set FindCursorHistoryPart = p
-            Exit Function
-        End If
-    Next p
-    Set FindCursorHistoryPart = Nothing
+    Set FindCursorHistoryPart = CustomXml_FindPart( _
+        doc, _
+        CURSOR_XML_NS, _
+        CURSOR_XML_ROOT_LOCAL _
+    )
 End Function
-
-Private Sub DeleteExistingCursorHistoryParts(ByVal doc As Document)
-    On Error GoTo SafeExit
-    Dim parts As CustomXMLParts
-    Set parts = doc.CustomXMLParts.SelectByNamespace(CURSOR_XML_NS)
-    If Not parts Is Nothing Then
-        Do While parts.Count > 0
-            parts(1).Delete
-        Loop
-        Exit Sub
-    End If
-SafeExit:
-    On Error Resume Next
-    Dim p As CustomXMLPart
-    For Each p In doc.CustomXMLParts
-        If InStr(1, p.XML, CURSOR_XML_NS, vbTextCompare) > 0 And InStr(1, p.XML, CURSOR_XML_ROOT_LOCAL, vbTextCompare) > 0 Then
-            p.Delete
-        End If
-    Next p
-End Sub
 
 Private Sub TrimCursorHistory(ByVal part As CustomXMLPart, ByVal maxHistory As Long)
     On Error GoTo SafeExit
 
     Dim nodes As CustomXMLNodes
-    Set nodes = part.SelectNodes("/*[local-name()='" & CURSOR_XML_ROOT_LOCAL & "']/*[local-name()='move']")
+    Set nodes = part.SelectNodes( _
+        "/*[local-name()='" & CURSOR_XML_ROOT_LOCAL & "']" & _
+        "/*[local-name()='move']" _
+    )
     If nodes Is Nothing Then Exit Sub
 
     Do While nodes.Count > maxHistory
         nodes(1).Delete ' 가장 오래된 것부터 삭제
-        Set nodes = part.SelectNodes("/*[local-name()='" & CURSOR_XML_ROOT_LOCAL & "']/*[local-name()='move']")
+        Set nodes = part.SelectNodes( _
+            "/*[local-name()='" & CURSOR_XML_ROOT_LOCAL & "']" & _
+            "/*[local-name()='move']" _
+        )
         If nodes Is Nothing Then Exit Sub
     Loop
 
@@ -277,7 +227,9 @@ End Sub
 
 Private Function BuildEmptyCursorHistoryXml() As String
     BuildEmptyCursorHistoryXml = "<?xml version=""1.0"" encoding=""UTF-8""?>" & _
-        "<sl:" & CURSOR_XML_ROOT_LOCAL & " xmlns:sl=""" & CURSOR_XML_NS & """ version=""" & CURSOR_XML_VERSION & """>" & _
+        "<sl:" & CURSOR_XML_ROOT_LOCAL & _
+        " xmlns:sl=""" & CURSOR_XML_NS & & _
+        """ version=""" & CURSOR_XML_VERSION & """>" & _
         "<meta />" & _
         "</sl:" & CURSOR_XML_ROOT_LOCAL & ">"
 End Function
@@ -290,14 +242,3 @@ Private Function BuildMoveNodeXml(ByVal info As CursorMoveInfo) As String
         """ subAddress=""" & EscapeXmlAttr(info.SubAddress) & _
         """ />"
 End Function
-
-Private Function EscapeXmlAttr(ByVal s As String) As String
-    ' XML attribute value escape
-    s = Replace(s, "&", "&amp;")
-    s = Replace(s, """", "&quot;")
-    s = Replace(s, "<", "&lt;")
-    s = Replace(s, ">", "&gt;")
-    s = Replace(s, "'", "&apos;")
-    EscapeXmlAttr = s
-End Function
-
