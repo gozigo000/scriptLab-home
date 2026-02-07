@@ -226,19 +226,26 @@ SafeExit:
 End Sub
 
 Private Function BuildEmptyCursorHistoryXml() As String
-    BuildEmptyCursorHistoryXml = "<?xml version=""1.0"" encoding=""UTF-8""?>" & _
-        "<sl:" & CURSOR_XML_ROOT_LOCAL & _
-        " xmlns:sl=""" & CURSOR_XML_NS & & _
-        """ version=""" & CURSOR_XML_VERSION & """>" & _
-        "<meta />" & _
-        "</sl:" & CURSOR_XML_ROOT_LOCAL & ">"
+    BuildEmptyCursorHistoryXml = _
+        Xml_BuildXmlDeclaration() & _
+        Xml_BuildRootStart( _
+            "sl", _
+            CURSOR_XML_ROOT_LOCAL, _
+            CURSOR_XML_NS, _
+            CURSOR_XML_VERSION _
+        ) & _
+        Xml_BuildEmptyElement("meta") & _
+        Xml_BuildRootEnd("sl", CURSOR_XML_ROOT_LOCAL)
 End Function
 
 Private Function BuildMoveNodeXml(ByVal info As CursorMoveInfo) As String
-    BuildMoveNodeXml = "<move pos=""" & CStr(info.Position) & _
-        """ page=""" & CStr(info.PageNo) & _
-        """ word=""" & EscapeXmlAttr(info.WordText) & _
-        """ bookmarks=""" & EscapeXmlAttr(info.BookmarkNames) & _
-        """ subAddress=""" & EscapeXmlAttr(info.SubAddress) & _
-        """ />"
+    Dim node As String
+    node = Xml_BuildElement("move")
+    node = Xml_AddAttr(node, "pos", CStr(info.Position))
+    node = Xml_AddAttr(node, "page", CStr(info.PageNo))
+    node = Xml_AddAttr(node, "word", info.WordText)
+    node = Xml_AddAttr(node, "bookmarks", info.BookmarkNames)
+    node = Xml_AddAttr(node, "subAddress", info.SubAddress)
+
+    BuildMoveNodeXml = node
 End Function

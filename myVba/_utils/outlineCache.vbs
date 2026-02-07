@@ -1042,23 +1042,41 @@ Private Function BuildCacheXml( _
     Dim sb As String
     Dim i As Long
     
-    sb = "<?xml version=""1.0"" encoding=""UTF-8""?>" & _
-         "<sl:" & OUTLINE_XML_ROOT_LOCAL & _
-         " xmlns:sl=""" & OUTLINE_XML_NS & _
-         """ version=""" & OUTLINE_XML_VERSION & """>" & _
-         "<meta docKey=""" & EscapeXmlAttr(docKey) & _
-         """ fingerprint=""" & EscapeXmlAttr(fp) & """ />" & _
-         "<sections count=""" & CStr(gSecCount) & """>"
+    Dim metaNode As String
+    metaNode = Xml_BuildElement("meta")
+    metaNode = Xml_AddAttr(metaNode, "docKey", docKey)
+    metaNode = Xml_AddAttr(metaNode, "fingerprint", fp)
+
+    Dim sectionsNode As String
+    sectionsNode = Xml_BuildElement("sections")
+    sectionsNode = Xml_AddAttr(sectionsNode, "count", CStr(gSecCount))
     
     For i = 1 To gSecCount
-        sb = sb & "<sec s=""" & CStr(gSecStart(i)) & _
-            """ e=""" & CStr(gSecEnd(i)) & _
-            """ l=""" & CStr(gSecLevel(i)) & """>" & _
-            "<t>" & EscapeXmlText(gSecTitle(i)) & "</t>" & _
-            "</sec>"
+        Dim secNode As String
+        secNode = Xml_BuildElement("sec")
+        secNode = Xml_AddAttr(secNode, "s", CStr(gSecStart(i)))
+        secNode = Xml_AddAttr(secNode, "e", CStr(gSecEnd(i)))
+        secNode = Xml_AddAttr(secNode, "l", CStr(gSecLevel(i)))
+
+        Dim tNode As String
+        tNode = Xml_BuildElement("t")
+        tNode = Xml_SetText(tNode, gSecTitle(i))
+
+        secNode = Xml_AddChild(secNode, tNode)
+        sectionsNode = Xml_AddChild(sectionsNode, secNode)
     Next i
     
-    sb = sb & "</sections></sl:" & OUTLINE_XML_ROOT_LOCAL & ">"
+    sb = ""
+    sb = sb & Xml_BuildXmlDeclaration()
+    sb = sb & Xml_BuildRootStart( _
+        "sl", _
+        OUTLINE_XML_ROOT_LOCAL, _
+        OUTLINE_XML_NS, _
+        OUTLINE_XML_VERSION _
+    )
+    sb = sb & metaNode
+    sb = sb & sectionsNode
+    sb = sb & Xml_BuildRootEnd("sl", OUTLINE_XML_ROOT_LOCAL)
     BuildCacheXml = sb
 End Function
 
@@ -1074,10 +1092,8 @@ Private Function ParseCacheXml( _
     outCount = 0
     
     Dim dom As Object
-    Set dom = CreateObject("MSXML2.DOMDocument.6.0")
-    dom.async = False
-    dom.validateOnParse = False
-    dom.resolveExternals = False
+    Set dom = Xml_CreateDomDocument()
+    If dom Is Nothing Then GoTo SafeExit
     
     If Not dom.LoadXML(xml) Then GoTo SafeExit
     
